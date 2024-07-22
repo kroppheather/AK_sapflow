@@ -24,15 +24,21 @@ weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamil
 hourW <- weather %>%
   filter(REPORT_TYPE == "FM-15") %>%
   select(starts_with("Hourly") | starts_with("DATE"))
+# Gambier islands are always in UTC -9 with no daylight savigns
+# this is the equivalent of alaksa standard time
+hourW$dateS <- ymd_hms(hourW$DATE, tz="Pacific/Gambier")
+# convert to local AK time that includes daylight savings
+hourW$date <- with_tz(hourW$dateS, tz="America/Anchorage")
+hourW$doy <- yday(hourW$date)
+hourW$hour <- hour(hourW$date) 
+hourW$month <- month(hourW$date) 
+hourW$year <- year(hourW$date)
+# trace gets converted to NA
+hourW$Precip_mm <- as.numeric(hourW$HourlyPrecipitation)*25.4
+hourW$TempC <- (as.numeric(hourW$HourlyDryBulbTemperature)- 32) * (5/9)
+ggplot(hourW, aes(date,TempC))+
+  geom_line()
 
-hourW$date <- ymd_hms(hourW$DATE)
-hourW$month <- month(hourW$date)
-hourW$mday <- day(hourW$date)
-
-hourSub <- hourW %>%
-  filter(month == 4 & mday == 9)
-tempC <- data.frame(date = hourSub$date,
-                    dryB = hourSub$HourlyDryBulbTemperature)
 
 ##### allometry -----
 # Quiñonez-Piñón and Valero found there was no significant relationship
