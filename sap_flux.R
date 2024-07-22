@@ -3,7 +3,7 @@ library(dplyr)
 library(ggplot2)
 
 # read in data
-sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors.csv")
+sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors 2.csv")
 # permafrost spruce
 site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/07_03_2024/Loranty CR1000_TableTC.dat",
                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
@@ -16,7 +16,23 @@ site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamil
                     sep=",", header=FALSE, skip=4)
 
 site2 <- site2[,1:13]  
+## weather 
+weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/3751235.csv")
 
+#RH and Precip
+# time in is local standard time
+hourW <- weather %>%
+  filter(REPORT_TYPE == "FM-15") %>%
+  select(starts_with("Hourly") | starts_with("DATE"))
+
+hourW$date <- ymd_hms(hourW$DATE)
+hourW$month <- month(hourW$date)
+hourW$mday <- day(hourW$date)
+
+hourSub <- hourW %>%
+  filter(month == 4 & mday == 9)
+tempC <- data.frame(date = hourSub$date,
+                    dryB = hourSub$HourlyDryBulbTemperature)
 
 ##### allometry -----
 # Quiñonez-Piñón and Valero found there was no significant relationship
