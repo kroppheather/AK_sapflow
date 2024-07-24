@@ -24,6 +24,23 @@ weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamil
 hourW <- weather %>%
   filter(REPORT_TYPE == "FM-15") %>%
   select(starts_with("Hourly") | starts_with("DATE"))
+
+# daily
+
+dailyW <- weather %>%
+  filter(REPORT_TYPE == "SOD  ") %>%
+  select(starts_with("Daily") | starts_with("DATE"))
+
+dailyW$date <-  ymd_hms(dailyW$DATE, tz="Pacific/Gambier")
+dailyW$snowD_cm <- as.numeric(dailyW$DailySnowDepth)*2.54 
+dailyW$sDepth_cm <- ifelse(dailyW$snowD_cm > 60, NA, dailyW$snowD_cm)
+ggplot(dailyW, aes(date,sDepth_cm))+
+  geom_line()
+dailyW$month <- month(dailyW$date)
+ggplot(dailyW %>% filter(month==4), aes(date,sDepth_cm))+
+  geom_line()
+
+AprilD <- dailyW %>% filter(month==4)
 # Gambier islands are always in UTC -9 with no daylight savigns
 # this is the equivalent of alaksa standard time
 hourW$dateS <- ymd_hms(hourW$DATE, tz="Pacific/Gambier")
@@ -395,4 +412,11 @@ ggplot(dtsite2b %>% filter(sensor == 11), aes(date, dT, color=as.factor(sensor))
 ggplot(dtsite1b %>% filter(sensor == 8), aes(date, dT, color=as.factor(sensor)))+
   geom_point()+
   geom_line()
+
+# sapwood relationship: extract depth allometry from Quiñonez-Piñón for PIGL and PIMA
+# sapwood area = pi(sd*DBH-sd^2) calculated from depth
+
+# sapwood area allometry Perron 2023 for PIMA
+# Quiñonez-Piñón has relationships between leaf area and sapwood area
+# Power 2014 for projected leaf area for PIMA and PIGL
 
