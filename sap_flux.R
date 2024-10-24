@@ -1,11 +1,13 @@
 library(lubridate)
 library(dplyr)
 library(ggplot2)
+library(reshape2)
 
 # read in data
 sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors 2.csv")
 # permafrost spruce
-site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/07_03_2024/Loranty CR1000_TableTC.dat",
+
+site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/10_08_2024/CR1000_sap_sl2_TableTC.dat",
                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
 site1 <- site1[,1:12] 
@@ -17,7 +19,28 @@ site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamil
 
 site2 <- site2[,1:13]  
 ## weather 
-weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/3751235.csv")
+weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/3822739.csv")
+
+## soil
+soil1 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv",
+               header=FALSE, skip=6  )
+soil1D <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv",
+                   header=FALSE, skip=5, nrows=1)
+soil1T <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv",
+                   header=FALSE, skip=4, nrows=1)
+names1 <- c("timestamp", "air.temp_2", 
+            paste0(soil1T[3:13],"_", soil1D[3:13]))
+colnames(soil1) <- names1
+soil1DF <- melt(soil1)
+type1 <- character()
+depth1 <- character()
+for(i in 1:nrow(soil1DF)){
+  type1[i] <- strsplit(as.character(soil1DF$variable[i]), "_")[[1]][1]
+  depth1[i] <- strsplit(as.character(soil1DF$variable[i]), "_")[[1]][2]
+}
+depth1f <- gsub(" m","", depth1)
+soil1DF$type <- type1
+soil1DF$depth <- depth1f 
 
 #RH and Precip
 # time in is local standard time
@@ -309,109 +332,6 @@ ggplot(siteHourJune, aes(x=date, y=sap_mm_h, color=Name))+
   scale_y_continuous( expand=c(0.01,0.01))
 
 
-############# old plot code ----
-# 122 May 1st
-# 153 June 1st
-
-ggplot(sapS1f, aes(date, velo_g_s, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  ylim(0,35)
-ggplot(sapS1f %>% filter(sensor == 3 & doy < 124), 
-       aes(date, velo_g_s, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
-
-ggplot(sapS1f %>% filter(doy < 124), 
-       aes(date, velo_g_s, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
-
-ggplot(sapS2f %>% filter(doy < 124), 
-       aes(date, velo_g_s, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
-
-ggplot(sapS2f, 
-       aes(date, velo_g_s, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-############################# June ----
-
-site1b <- read.table("G:/My Drive/research/projects/AK_sapflow/06_13_2024/CR1000_sap_sl2_TableTC.dat",
-                    sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
-
-site1b <- site1b[,1:12] 
-
-
-
-site2b <- read.table("G:/My Drive/research/projects/AK_sapflow/06_13_2024/sapflow2_TableDT.dat",
-                    sep=",", header=FALSE, skip=4)
-
-site2b <- site2b[,1:13]  
-
-
-site2b$dateF <- ymd_hms(site2b[,1])
-site2b$year <- year(site2b$dateF)
-site2b$doy <- yday(site2b$dateF)
-site2b$hour <- hour(site2b$dateF)+(minute(site2b$dateF)/60)
-site2b$DD <- site2b$doy + (site2b$hour/24)
-
-
-site1b$dateF <- ymd_hms(site1b[,1])
-site1b$year <- year(site1b$dateF)
-site1b$doy <- yday(site1b$dateF)
-site1b$hour <- hour(site1b$dateF)+(minute(site1b$dateF)/60)
-site1b$DD <- site1b$doy + (site1b$hour/24)
-
-dtsite1b <- data.frame(date= rep(site1b$date, times = 8), 
-                      doy = rep(site1b$doy, times = 8),
-                      hourD = rep(site1b$hour, times = 8),
-                      DD = rep(site1b$DD, times = 8),
-                      sensor = rep(seq(1,8), each = nrow(site1b)), 
-                      dT = as.numeric(c(site1b[,5],
-                                        site1b[,6],
-                                        site1b[,7],
-                                        site1b[,8],
-                                        site1b[,9],
-                                        site1b[,10],
-                                        site1b[,11],
-                                        site1b[,12])))
-
-dtsite2b <- data.frame(date= rep(site2b$date, times = 11), 
-                      doy = rep(site2b$doy, times = 11),
-                      hourD = rep(site2b$hour, times = 11),
-                      DD = rep(site2b$DD, times = 11),
-                      sensor = rep(seq(1,11), each = nrow(site2b)), 
-                      dT = as.numeric(c(site2b[,3],
-                                        site2b[,4],
-                                        site2b[,5],
-                                        site2b[,6],
-                                        site2b[,7],
-                                        site2b[,8],
-                                        site2b[,9],
-                                        site2b[,10],
-                                        site2b[,11],
-                                        site2b[,12],
-                                        site2b[,13])))
-
-ggplot(dtsite2b, aes(date, dT, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
-
-ggplot(dtsite1b, aes(date, dT, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
-
-ggplot(dtsite2b %>% filter(sensor == 11), aes(date, dT, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
-
-
-ggplot(dtsite1b %>% filter(sensor == 8), aes(date, dT, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()
 
 # sapwood relationship: extract depth allometry from Quiñonez-Piñón for PIGL and PIMA
 # sapwood area = pi(sd*DBH-sd^2) calculated from depth
