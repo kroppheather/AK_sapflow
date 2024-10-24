@@ -42,6 +42,23 @@ depth1f <- gsub(" m","", depth1)
 soil1DF$type <- type1
 soil1DF$depth <- depth1f 
 
+soil1DF$dateF <- mdy_hm(soil1DF$timestamp)
+soil1DF$doy <- yday(soil1DF$dateF)
+soil1DF$hour <- hour(soil1DF$dateF)+(minute(soil1DF$dateF)/60)
+soil1DF$year <- year(soil1DF$dateF)
+
+swc1 <- soil1DF %>%
+  filter(type == "Soil moisture")
+
+s_temp1 <- soil1DF %>%
+  filter(type == "Temperature")
+
+day_st1 <- s_temp1 %>%
+  group_by(doy, year, depth) %>%
+  summarise(stemp = mean(value, na.rm=TRUE))
+day_swc1 <- swc1 %>%
+  group_by(doy, year, depth) %>%
+  summarise(swc = mean(value, na.rm=TRUE))
 #RH and Precip
 # time in is local standard time
 hourW <- weather %>%
@@ -305,7 +322,15 @@ siteHourMay <- sapHSite %>%
   filter(doy >= 122 & doy < 153)
 
 siteHourJune <- sapHSite %>%
-  filter(doy >= 153)
+  filter(doy >= 153 & doy <= 213)
+
+siteHourAug <- sapHSite %>%
+  filter( doy >= 213)
+
+swc1April <- day_swc1 %>%
+  filter(doy <= 122 & doy >= 92)
+st1April <- day_st1 %>%
+  filter(doy <= 122 & doy >= 92)
 
 ggplot(siteHourApril, aes(x=date, y=sap_mm_h, color=Name))+
   geom_line()+
@@ -314,6 +339,12 @@ ggplot(siteHourApril, aes(x=date, y=sap_mm_h, color=Name))+
   labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
   theme_classic()+
   scale_y_continuous( expand=c(0.01,0.01))
+ggplot(st1April,aes(x=doy, y=stemp, color=depth) )+
+  geom_line()+
+  geom_point()
+ggplot(swc1April,aes(x=doy, y=swc, color=depth) )+
+  geom_line()+
+  geom_point()
   
 ggplot(siteHourMay, aes(x=date, y=sap_mm_h, color=Name))+
   geom_line()+
@@ -331,7 +362,13 @@ ggplot(siteHourJune, aes(x=date, y=sap_mm_h, color=Name))+
   theme_classic()+
   scale_y_continuous( expand=c(0.01,0.01))
 
-
+ggplot(siteHourAug, aes(x=date, y=sap_mm_h, color=Name))+
+  geom_line()+
+  geom_point()+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic()+
+  scale_y_continuous( expand=c(0.01,0.01))
 
 # sapwood relationship: extract depth allometry from Quiñonez-Piñón for PIGL and PIMA
 # sapwood area = pi(sd*DBH-sd^2) calculated from depth
