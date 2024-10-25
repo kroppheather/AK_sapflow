@@ -59,6 +59,51 @@ day_st1 <- s_temp1 %>%
 day_swc1 <- swc1 %>%
   group_by(doy, year, depth) %>%
   summarise(swc = mean(value, na.rm=TRUE))
+
+
+
+soil2 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/Bicycle_bumps_2024-01-01_2024-10-01.csv",
+                  header=FALSE, skip=4  )
+soil2D <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/Bicycle_bumps_2024-01-01_2024-10-01.csv",
+                   header=FALSE, skip=3, nrows=1)
+soil2T <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/Bicycle_bumps_2024-01-01_2024-10-01.csv",
+                   header=FALSE, skip=2, nrows=1)
+
+names2 <- c("timestamp", "air.temp_2", 
+            paste0(soil2T[3:7],"_", soil2D[3:7]))
+colnames(soil2) <- names2
+soil2DF <- melt(soil2)
+type2 <- character()
+depth2 <- character()
+for(i in 1:nrow(soil2DF)){
+  type2[i] <- strsplit(as.character(soil2DF$variable[i]), "_")[[1]][1]
+  depth2[i] <- strsplit(as.character(soil2DF$variable[i]), "_")[[1]][2]
+}
+depth2f <- gsub(" m","", depth2)
+soil2DF$type <- type2
+soil2DF$depth <- depth2f 
+soil2DF <- na.omit(soil2DF)
+
+
+soil2DF$dateF <- mdy_hm(soil2DF$timestamp)
+soil2DF$doy <- yday(soil2DF$dateF)
+soil2DF$hour <- hour(soil2DF$dateF)+(minute(soil2DF$dateF)/60)
+soil2DF$year <- year(soil2DF$dateF)
+
+swc2 <- soil2DF %>%
+  filter(type == "Water Content")
+
+s_temp2 <- soil1DF %>%
+  filter(type == "Temperature")
+
+day_st2 <- s_temp2 %>%
+  group_by(doy, year, depth) %>%
+  summarise(stemp = mean(value, na.rm=TRUE))
+day_swc2 <- swc2 %>%
+  group_by(doy, year, depth) %>%
+  summarise(swc = mean(value, na.rm=TRUE))
+
+
 #RH and Precip
 # time in is local standard time
 hourW <- weather %>%
