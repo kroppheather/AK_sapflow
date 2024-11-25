@@ -3,6 +3,8 @@ library(dplyr)
 library(ggplot2)
 library(reshape2)
 
+dirSave <- "/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/AGU"
+
 ###### read in data -----
 sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors 2.csv")
 # permafrost spruce
@@ -326,19 +328,87 @@ ggplot(sapHSite, aes(x=date, y=sap_mm_h, color=Name))+
   geom_point()
 
 ###### Organize data for graphing ----
-  
+sapHSite$DD <- sapHSite$doy + (sapHSite$Hours/24)
 siteHourGraph <- sapHSite %>%
   filter(doy <= 182)
+sapHour1 <- siteHourGraph %>%
+  filter(siteID == 1) %>%
+  arrange(DD)
+
+sapHour2 <- siteHourGraph %>%
+  filter(siteID == 2)
 
 swcGraph1 <- day_swc1 %>%
   filter(doy <= 182 & doy >= 92) 
 
-stGraph2 <- day_st2 %>%
+stGraph1 <- day_st1 %>%
   filter(doy <= 182 & doy >= 92)
 
 
 swcGraph2 <- day_swc2 %>%
   filter(doy <= 182 & doy >= 92) 
 
-stGraph1 <- day_st1 %>%
+stGraph2 <- day_st2 %>%
   filter(doy <= 182 & doy >= 92)
+dailyW$doy <- yday(dailyW$date)
+dailyWf <- dailyW %>%
+  filter(doy <= 182 & doy >= 92)
+dailyWf$SD_m <- dailyWf$sDepth_cm/100
+###### Graphing parms ----
+colsSxS <- c("#C187C7", # permafrost picea
+            "#009F57", # bb picea
+            "#ADDABC") # bb betula 
+
+depthsST1 <-  c("0.1", "0.18", "0.4", "0.75", "1.5")
+depthsST2 <-  c("0.1", "0.18", "0.4", "0.75", "1.5")
+depthsSW1 <- unique(swcGraph1$depth)
+depthsSW2 <- unique(swcGraph2$depth)
+            
+cols1ST <- hcl.colors(5, palette = "Purples2")
+cols1SW <- c(cols1ST[2],cols1ST[3], cols1ST[4])
+
+cols2ST <- hcl.colors(5, palette = "Greens3")
+cols2SW <- c(cols2ST[1], cols2ST[3])
+###### Daily/Hourly graphs ----
+# make graphs of data by doy
+
+
+
+wd <- 20
+hd <- 7
+
+# smith lake (permafrost )
+png(paste0(dirSave, "/fig_2_cover_panel_area.png"), width=25, height=30, units="in", res=300)
+  layout(matrix(seq(1,3),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd,hd)*2.54))
+  par(mai= c(1,1,1,1))
+  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,160),
+       type="n", axes=FALSE, yaxs="i", xaxs="i",
+       xlab = " ", ylab= " ")
+  points(sapHour1$DD, sapHour1$sap_mm_h, type="b",
+         col=colsSxS[1], pch=19)
+  # soil temp
+  par(mai= c(1,1,1,1))
+  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-4,16),
+       type="n", axes=FALSE, yaxs="i", xaxs="i",
+       xlab = " ", ylab= " ")
+  for(i in 1:length(depthsST1)){
+    stplot = stGraph1 %>%
+      filter(depth == depthsST1[i])
+    points(stplot$doy, stplot$stemp, type="l",
+           col=cols1ST[i], lwd=2)   
+  }
+  
+  par(mai= c(1,1,1,1))
+  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,0.65),
+       type="n", axes=FALSE, yaxs="i", xaxs="i",
+       xlab = " ", ylab= " ")
+  for(i in 1:length(depthsSW1)){
+    swplot = swcGraph1 %>%
+      filter(depth == depthsSW1[i])
+    points(swplot$doy, swplot$swc, type="l",
+           col=cols1SW[i], lwd=2)   
+  }
+  points(dailyWf$doy, dailyWf$SD_m, type="l",
+         col="black", lwd=2)  
+
+dev.off()
