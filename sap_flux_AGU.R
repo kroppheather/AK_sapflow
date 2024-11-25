@@ -3,7 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(reshape2)
 
-# read in data
+###### read in data -----
 sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors 2.csv")
 # permafrost spruce
 
@@ -31,6 +31,8 @@ soil1T <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilt
 names1 <- c("timestamp", "air.temp_2", 
             paste0(soil1T[3:13],"_", soil1D[3:13]))
 colnames(soil1) <- names1
+
+###### organize soil data ----
 soil1DF <- melt(soil1)
 type1 <- character()
 depth1 <- character()
@@ -103,7 +105,7 @@ day_swc2 <- swc2 %>%
   group_by(doy, year, depth) %>%
   summarise(swc = mean(value, na.rm=TRUE))
 
-
+###### Organize weather data ------
 #RH and Precip
 # time in is local standard time
 hourW <- weather %>%
@@ -142,7 +144,7 @@ ggplot(hourW, aes(date,TempC))+
   geom_line()
 
 
-##### allometry -----
+###### allometry -----
 # Quiñonez-Piñón and Valero found there was no significant relationship
 # between dbh and sapwood between 10-40 cm dbh
 # mean value for North was 3.2 cm
@@ -152,7 +154,7 @@ sensors$sapwood <- ifelse(sensors$Species == "PIMA", 3.2,
 
 
 
-##### organize dates ----
+###### organize sapflow dates ----
 
 
 site2$dateF <- ymd_hms(site2[,1])
@@ -227,7 +229,7 @@ ggplot(dtSite1 %>% filter(sensor ==4), aes(date, dT, color=as.factor(sensor)))+
   geom_line()     
 
 
-################### calculations ----
+###### sapflow calculations ----
 
 
 #filter night so maximum in day and sensor is provided
@@ -300,50 +302,13 @@ sapHour$mm_h <- sapHour$sap_mm_s*60*60
 sapNorth <- sapHour %>%
   filter(Aspect == "N")
 
-sapHourApril <- sapNorth %>%
-  filter(doy < 122)
+# sapwood relationship: extract depth allometry from Quiñonez-Piñón for PIGL and PIMA
+# sapwood area = pi(sd*DBH-sd^2) calculated from depth
 
-sapHourMay <- sapNorth %>%
-  filter(doy >= 122 & doy < 153)
+# sapwood area allometry Perron 2023 for PIMA
+# Quiñonez-Piñón has relationships between leaf area and sapwood area
+# Power 2014 for projected leaf area for PIMA and PIGL
 
-sapHourJune <- sapNorth %>%
-  filter(doy >= 153)
-
-ggplot(sapHourApril %>% filter(siteID == 1), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourApril %>% filter(siteID == 2), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourMay %>% filter(siteID == 1), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourMay %>% filter(siteID == 2), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourJune %>% filter(siteID == 1), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourJune %>% filter(siteID == 2), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
 
 # look at averages for site and genus
 sapHSite <- sapNorth %>%
@@ -359,70 +324,21 @@ sapHSite$upperE <- sapHSite$sap_mm_h + sapHSite$se
 ggplot(sapHSite, aes(x=date, y=sap_mm_h, color=Name))+
   geom_line()+
   geom_point()
+
+###### Organize data for graphing ----
   
-siteHourApril <- sapHSite %>%
-  filter(doy < 122)
+siteHourGraph <- sapHSite %>%
+  filter(doy <= 182)
 
-siteHourMay <- sapHSite %>%
-  filter(doy >= 122 & doy < 153)
+swcGraph1 <- day_swc1 %>%
+  filter(doy <= 182 & doy >= 92) 
 
-siteHourJune <- sapHSite %>%
-  filter(doy >= 153 & doy <= 213)
-
-siteHourAug <- sapHSite %>%
-  filter( doy >= 213)
-soil1DF$DD <- soil1DF$doy + (soil1DF$hour/24)
-
-swc1April <- soil1DF %>%
-  filter(doy <= 122 & doy >= 92) %>%
-  filter(type == "Soil moisture")
+stGraph2 <- day_st2 %>%
+  filter(doy <= 182 & doy >= 92)
 
 
-st1April <- soil1DF %>%
-  filter(doy <= 122 & doy >= 92)%>%
-  filter(type == "Temperature")
+swcGraph2 <- day_swc2 %>%
+  filter(doy <= 182 & doy >= 92) 
 
-ggplot(siteHourApril, aes(x=date, y=sap_mm_h, color=Name))+
-  geom_line()+
-  geom_point()+
-  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5)+
-  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
-  theme_classic()+
-  scale_y_continuous( expand=c(0.01,0.01))
-ggplot(st1April,aes(x=DD, y=value, color=depth) )+
-  geom_line()+
-  geom_point()
-ggplot(swc1April,aes(x=DD, y=value, color=depth) )+
-  geom_line()
-  
-ggplot(siteHourMay, aes(x=date, y=sap_mm_h, color=Name))+
-  geom_line()+
-  geom_point()+
-  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5)+
-  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
-  theme_classic()+
-  scale_y_continuous( expand=c(0.01,0.01))
-
-ggplot(siteHourJune, aes(x=date, y=sap_mm_h, color=Name))+
-  geom_line()+
-  geom_point()+
-  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5)+
-  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
-  theme_classic()+
-  scale_y_continuous( expand=c(0.01,0.01))
-
-ggplot(siteHourAug, aes(x=date, y=sap_mm_h, color=Name))+
-  geom_line()+
-  geom_point()+
-  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5)+
-  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
-  theme_classic()+
-  scale_y_continuous( expand=c(0.01,0.01))
-
-# sapwood relationship: extract depth allometry from Quiñonez-Piñón for PIGL and PIMA
-# sapwood area = pi(sd*DBH-sd^2) calculated from depth
-
-# sapwood area allometry Perron 2023 for PIMA
-# Quiñonez-Piñón has relationships between leaf area and sapwood area
-# Power 2014 for projected leaf area for PIMA and PIGL
-
+stGraph1 <- day_st1 %>%
+  filter(doy <= 182 & doy >= 92)
