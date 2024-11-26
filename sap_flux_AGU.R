@@ -354,6 +354,10 @@ dailyW$doy <- yday(dailyW$date)
 dailyWf <- dailyW %>%
   filter(doy <= 182 & doy >= 92)
 dailyWf$SD_m <- dailyWf$sDepth_cm/100
+dailyWf$temp_c <- (dailyWf$DailyAverageDryBulbTemperature-32)*(5/9)
+dailyWf$precip_mm <- ifelse(dailyWf$DailyPrecipitation == "T",
+                            0,
+                            as.numeric(dailyWf$DailyPrecipitation)*25.4)
 ###### Graphing parms ----
 colsSxS <- c("#C187C7", # permafrost picea
             "#009F57", # bb picea
@@ -374,11 +378,58 @@ cols2SW <- c(cols2ST[1], cols2ST[3])
 
 
 
-wd <- 20
-hd <- 7
+wd <- 18
+hd <- 8
+# cex axis
+ca <- 2.5
+# line for first label
+ll1 <- 4
+# cex for label text
+cma <- 2.5
+# legend size
+lgc <- 2.5
+# met graph
+png(paste0(dirSave, "/met_figure.png"), width=23, height=20, units="in", res=150)
+  layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
+  par(mai= c(1,1,1,1))
+  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-15,25),
+       type="n", axes=FALSE, yaxs="i", xaxs="i",
+       xlab = " ", ylab= " ")
+  points(dailyWf$doy, dailyWf$temp_c,
+         type="l", pch=19)
+  axis(1, seq(90,180, by=10), cex.axis=ca)
+  axis(2, seq(-15,25, by=5), cex.axis=ca, las=2)
+  mtext("Air temperature (C)", side=2, line=ll1,
+        cex=cma)
+  par(mai= c(1,1,1,1))
+  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,40),
+       type="n", axes=FALSE, yaxs="i", xaxs="i",
+       xlab = " ", ylab= " ")
+  for(i in 1:nrow(dailyWf)){
+    polygon(c(dailyWf$doy[i]-0.25,dailyWf$doy[i]-0.25,
+              dailyWf$doy[i]+0.25,dailyWf$doy[i]+0.25),
+            c(0,dailyWf$precip_mm[i],dailyWf$precip_mm[i],0),
+    col="lightskyblue1", border=NA)
+  }
+  points(dailyWf$doy, dailyWf$sDepth_cm,
+         type="l", pch=19)
+  legend("topright", c("Precipitation", "Snow depth"),
+         lty=c(NA,1),pch=c(15,NA), col=c("lightskyblue1",NA),
+         bty="n", cex=lgc)
+  axis(1, seq(90,180, by=10), cex.axis=ca)
+  axis(2, seq(0,40, by=5), cex.axis=ca, las=2)
+  axis(4, seq(0,40, by=5), cex.axis=ca, las=2)
+  mtext("Precipitation (mm)", side=2, line=ll1,
+        cex=cma)
+  mtext("Snow depth (cm)", side=4, line=ll1,
+        cex=cma)
+  mtext("Day of year", side=1, line=ll1,
+        cex=cma)
+dev.off()
+
 
 # smith lake (permafrost )
-png(paste0(dirSave, "/fig_2_cover_panel_area.png"), width=25, height=30, units="in", res=300)
+png(paste0(dirSave, "/smith_lake_sf_soil.png"), width=25, height=20, units="in", res=300)
   layout(matrix(seq(1,3),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd,hd)*2.54))
   par(mai= c(1,1,1,1))
   plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,160),
@@ -408,7 +459,5 @@ png(paste0(dirSave, "/fig_2_cover_panel_area.png"), width=25, height=30, units="
     points(swplot$doy, swplot$swc, type="l",
            col=cols1SW[i], lwd=2)   
   }
-  points(dailyWf$doy, dailyWf$SD_m, type="l",
-         col="black", lwd=2)  
 
 dev.off()
