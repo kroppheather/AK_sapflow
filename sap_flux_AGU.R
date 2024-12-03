@@ -394,7 +394,7 @@ cols2SW <- c(cols2ST[1], cols2ST[3])
 
 
 wd <- 15
-hd <- 3.5
+hd <- 4
 # cex axis
 ca <- 2.5
 # line for first label
@@ -413,7 +413,7 @@ ma <- 0.6
 dayseq <- seq(90,180, by=10)
 dayseql <- c("",seq(100,180, by=10))
 # met graph
-png(paste0(dirSave, "/met_figure.png"), width=17, height=8, units="in", res=150)
+png(paste0(dirSave, "/met_figure.png"), width=17, height=9, units="in", res=150)
   layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
   par(mai= c(ma,ma,ma,ma))
   plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-18,30),
@@ -423,7 +423,7 @@ png(paste0(dirSave, "/met_figure.png"), width=17, height=8, units="in", res=150)
          type="l", pch=19, col="cadetblue3", lwd=2)
   points(dailyWf$doy, dailyWf$maxT,
          type="l", pch=19, col="tomato3", lwd=2)
-  
+  abline(h=0, lty=2)
   axis(2, seq(-15,25, by=5), cex.axis=ca, las=2)
   axis(1, dayseq , 
        rep("", length(dayseq )),
@@ -437,7 +437,7 @@ png(paste0(dirSave, "/met_figure.png"), width=17, height=8, units="in", res=150)
          lty=c(1,1), 
          col=c("cadetblue3","tomato3"),
          bty="n", cex=lgc)
-  
+# precip
   par(mai= c(ma,ma,ma,ma))
   plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,40),
        type="n", axes=FALSE, yaxs="i", xaxs="i",
