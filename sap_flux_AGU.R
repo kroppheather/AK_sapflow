@@ -97,8 +97,8 @@ soil2DF$year <- year(soil2DF$dateF)
 swc2 <- soil2DF %>%
   filter(type == "Water Content")
 
-s_temp2 <- soil1DF %>%
-  filter(type == "Temperature")
+s_temp2 <- soil2DF %>%
+  filter(type == "Temp" | type == " Temp")
 
 day_st2 <- s_temp2 %>%
   group_by(doy, year, depth) %>%
@@ -145,7 +145,10 @@ hourW$TempC <- (as.numeric(hourW$HourlyDryBulbTemperature)- 32) * (5/9)
 ggplot(hourW, aes(date,TempC))+
   geom_line()
 
-
+dailyTemp <- hourW %>%
+  group_by(doy, year) %>%
+  summarise(minT = min(TempC, na.rm=TRUE),
+            maxT = max(TempC, na.rm=TRUE))
 ###### allometry -----
 # Quiñonez-Piñón and Valero found there was no significant relationship
 # between dbh and sapwood between 10-40 cm dbh
@@ -328,6 +331,8 @@ ggplot(sapHSite, aes(x=date, y=sap_mm_h, color=Name))+
   geom_point()
 
 ###### Organize data for graphing ----
+sapHSite <- sapHSite %>%
+  ungroup(doy, Hours)
 sapHSite$DD <- sapHSite$doy + (sapHSite$Hours/24)
 siteHourGraph <- sapHSite %>%
   filter(doy <= 182)
@@ -336,7 +341,15 @@ sapHour1 <- siteHourGraph %>%
   arrange(DD)
 
 sapHour2 <- siteHourGraph %>%
-  filter(siteID == 2)
+  filter(siteID == 2)%>%
+  arrange(DD)
+sapHour2p <- sapHour2 %>%
+  filter(Genus == "Picea")%>%
+  arrange(DD)
+
+sapHour2b <- sapHour2 %>%
+  filter(Genus == "Betula")%>%
+  arrange(DD)
 
 swcGraph1 <- day_swc1 %>%
   filter(doy <= 182 & doy >= 92) 
@@ -351,7 +364,9 @@ swcGraph2 <- day_swc2 %>%
 stGraph2 <- day_st2 %>%
   filter(doy <= 182 & doy >= 92)
 dailyW$doy <- yday(dailyW$date)
-dailyWf <- dailyW %>%
+dailyWj <- left_join(dailyW, dailyTemp, by=c("doy"))
+
+dailyWf <- dailyWj %>%
   filter(doy <= 182 & doy >= 92)
 dailyWf$SD_m <- dailyWf$sDepth_cm/100
 dailyWf$temp_c <- (dailyWf$DailyAverageDryBulbTemperature-32)*(5/9)
@@ -364,7 +379,7 @@ colsSxS <- c("#C187C7", # permafrost picea
             "#ADDABC") # bb betula 
 
 depthsST1 <-  c("0.1", "0.18", "0.4", "0.75", "1.5")
-depthsST2 <-  c("0.1", "0.18", "0.4", "0.75", "1.5")
+depthsST2 <-  c("0.1", "0.5")
 depthsSW1 <- unique(swcGraph1$depth)
 depthsSW2 <- unique(swcGraph2$depth)
             
@@ -378,30 +393,52 @@ cols2SW <- c(cols2ST[1], cols2ST[3])
 
 
 
-wd <- 18
-hd <- 8
+wd <- 15
+hd <- 3.5
 # cex axis
 ca <- 2.5
 # line for first label
 ll1 <- 4
+# line for doy
+llxa <- 1.75
 # cex for label text
-cma <- 2.5
+cma <- 2
+# cex for doy labels
+cax <- 2
 # legend size
-lgc <- 2.5
+lgc <- 2
+# mai size
+ma <- 0.6
+# day seq
+dayseq <- seq(90,180, by=10)
+dayseql <- c("",seq(100,180, by=10))
 # met graph
-png(paste0(dirSave, "/met_figure.png"), width=23, height=20, units="in", res=150)
+png(paste0(dirSave, "/met_figure.png"), width=17, height=8, units="in", res=150)
   layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
-  par(mai= c(1,1,1,1))
-  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-15,25),
+  par(mai= c(ma,ma,ma,ma))
+  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-18,30),
        type="n", axes=FALSE, yaxs="i", xaxs="i",
        xlab = " ", ylab= " ")
-  points(dailyWf$doy, dailyWf$temp_c,
-         type="l", pch=19)
-  axis(1, seq(90,180, by=10), cex.axis=ca)
+  points(dailyWf$doy, dailyWf$minT,
+         type="l", pch=19, col="cadetblue3", lwd=2)
+  points(dailyWf$doy, dailyWf$maxT,
+         type="l", pch=19, col="tomato3", lwd=2)
+  
   axis(2, seq(-15,25, by=5), cex.axis=ca, las=2)
+  axis(1, dayseq , 
+       rep("", length(dayseq )),
+       cex.axis=ca)
+  mtext(dayseql ,
+        at=dayseq ,side=1, line=llxa, 
+        cex=cax)
   mtext("Air temperature (C)", side=2, line=ll1,
         cex=cma)
-  par(mai= c(1,1,1,1))
+  legend("bottomright", c("Daily minimum", "Daily maximum"),
+         lty=c(1,1), 
+         col=c("cadetblue3","tomato3"),
+         bty="n", cex=lgc)
+  
+  par(mai= c(ma,ma,ma,ma))
   plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,40),
        type="n", axes=FALSE, yaxs="i", xaxs="i",
        xlab = " ", ylab= " ")
@@ -414,9 +451,15 @@ png(paste0(dirSave, "/met_figure.png"), width=23, height=20, units="in", res=150
   points(dailyWf$doy, dailyWf$sDepth_cm,
          type="l", pch=19)
   legend("topright", c("Precipitation", "Snow depth"),
-         lty=c(NA,1),pch=c(15,NA), col=c("lightskyblue1",NA),
+         lty=c(NA,1),pch=c(15,NA), 
+         col=c("lightskyblue1","black"),
          bty="n", cex=lgc)
-  axis(1, seq(90,180, by=10), cex.axis=ca)
+  axis(1, dayseq , 
+       rep("", length(dayseq )),
+       cex.axis=ca)
+  mtext(dayseql ,
+        at=dayseq ,side=1, line=llxa, 
+        cex=cax)
   axis(2, seq(0,40, by=5), cex.axis=ca, las=2)
   axis(4, seq(0,40, by=5), cex.axis=ca, las=2)
   mtext("Precipitation (mm)", side=2, line=ll1,
@@ -428,17 +471,26 @@ png(paste0(dirSave, "/met_figure.png"), width=23, height=20, units="in", res=150
 dev.off()
 
 
-# smith lake (permafrost )
-png(paste0(dirSave, "/smith_lake_sf_soil.png"), width=25, height=20, units="in", res=300)
+# smith lake (permafrost ) ----
+png(paste0(dirSave, "/smith_lake_sf_soil.png"), width=17, height=11.5, units="in", res=150)
   layout(matrix(seq(1,3),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd,hd)*2.54))
-  par(mai= c(1,1,1,1))
+  par(mai= c(ma,ma,ma,ma))
   plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,160),
        type="n", axes=FALSE, yaxs="i", xaxs="i",
        xlab = " ", ylab= " ")
   points(sapHour1$DD, sapHour1$sap_mm_h, type="b",
          col=colsSxS[1], pch=19)
+  axis(1, dayseq , 
+       rep("", length(dayseq )),
+       cex.axis=ca)
+  mtext(dayseql ,
+        at=dayseq ,side=1, line=llxa, 
+        cex=cax)
+  axis(2, seq(0,160, by=20), cex.axis=ca, las=2)
+  mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+        cex=cma)
   # soil temp
-  par(mai= c(1,1,1,1))
+  par(mai= c(ma,ma,ma,ma))
   plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-4,16),
        type="n", axes=FALSE, yaxs="i", xaxs="i",
        xlab = " ", ylab= " ")
@@ -449,7 +501,24 @@ png(paste0(dirSave, "/smith_lake_sf_soil.png"), width=25, height=20, units="in",
            col=cols1ST[i], lwd=2)   
   }
   
-  par(mai= c(1,1,1,1))
+  legend("topleft",
+         depthsST1, col=cols1ST,
+         lwd=2,
+         bty="n", cex=lgc, title="depth (m)")
+  
+  axis(1, dayseq , 
+       rep("", length(dayseq )),
+       cex.axis=ca)
+  mtext(dayseql ,
+        at=dayseq ,side=1, line=llxa, 
+        cex=cax)
+  axis(2, seq(-4,16, by=4), cex.axis=ca, las=2)
+  mtext(expression(paste("Soil temperature (",degree,"C)")), 
+                         side=2, line=ll1,
+        cex=cma)
+
+  
+  par(mai= c(ma,ma,ma,ma))
   plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,0.65),
        type="n", axes=FALSE, yaxs="i", xaxs="i",
        xlab = " ", ylab= " ")
@@ -459,5 +528,113 @@ png(paste0(dirSave, "/smith_lake_sf_soil.png"), width=25, height=20, units="in",
     points(swplot$doy, swplot$swc, type="l",
            col=cols1SW[i], lwd=2)   
   }
+  
+  legend("topleft",
+         depthsSW1, col=cols1SW,
+         lwd=2,
+         bty="n", cex=lgc, title="depth (m)")
+  axis(1, dayseq , 
+       rep("", length(dayseq )),
+       cex.axis=ca)
+  mtext(dayseql ,
+        at=dayseq ,side=1, line=llxa, 
+        cex=cax)
+  axis(2, seq(0,0.6, by=0.2), cex.axis=ca, las=2)
+
+  mtext(expression(paste("Soil moisture (m"^3,"m"^-3,")")),
+                         side=2, line=ll1,
+        cex=cma)
+  mtext("Day of year", side=1, line=ll1,
+        cex=cma)
+  
+  
+
+dev.off()
+
+
+# bb (no permafrost ) ----
+png(paste0(dirSave, "/bb_sf_soil.png"), width=17, height=11.5, units="in", res=150)
+layout(matrix(seq(1,3),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd,hd)*2.54))
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,160),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+points(sapHour2b$DD, 
+       sapHour2b$sap_mm_h, 
+       type="b",
+       col=colsSxS[3], pch=19)
+points(sapHour2p$DD, 
+       sapHour2p$sap_mm_h, 
+       type="b",
+       col=colsSxS[2], pch=19)
+
+axis(1, dayseq , 
+     rep("", length(dayseq )),
+     cex.axis=ca)
+mtext(dayseql ,
+      at=dayseq ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(0,160, by=20), cex.axis=ca, las=2)
+mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+      cex=cma)
+# soil temp
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-4,16),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+for(i in 1:length(depthsST2)){
+  stplot = stGraph2 %>%
+    filter(depth == depthsST2[i])
+  points(stplot$doy, stplot$stemp, type="l",
+         col=cols2SW[i], lwd=2)   
+}
+
+legend("topleft",
+       depthsST2, col=cols2ST,
+       lwd=2,
+       bty="n", cex=lgc, title="depth (m)")
+
+axis(1, dayseq , 
+     rep("", length(dayseq )),
+     cex.axis=ca)
+mtext(dayseql ,
+      at=dayseq ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(-4,16, by=4), cex.axis=ca, las=2)
+mtext(expression(paste("Soil temperature (",degree,"C)")), 
+      side=2, line=ll1,
+      cex=cma)
+
+
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,0.65),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+for(i in 1:length(depthsSW2)){
+  swplot = swcGraph2 %>%
+    filter(depth == depthsSW2[i])
+  points(swplot$doy, swplot$swc, type="l",
+         col=cols2SW[i], lwd=2)   
+}
+
+legend("topleft",
+       depthsSW2, col=cols2SW,
+       lwd=2,
+       bty="n", cex=lgc, title="depth (m)")
+axis(1, dayseq , 
+     rep("", length(dayseq )),
+     cex.axis=ca)
+mtext(dayseql ,
+      at=dayseq ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(0,0.6, by=0.2), cex.axis=ca, las=2)
+
+mtext(expression(paste("Soil moisture (m"^3,"m"^-3,")")),
+      side=2, line=ll1,
+      cex=cma)
+mtext("Day of year", side=1, line=ll1,
+      cex=cma)
+
+
 
 dev.off()
