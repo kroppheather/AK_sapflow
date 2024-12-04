@@ -63,16 +63,20 @@ swc1$DD <- (swc1$doy-1)+(swc1$hour/24)
 s_temp2$DD <- (s_temp2$doy-1)+(s_temp2$hour/24)
 swc2$DD <- (swc2$doy-1)+(swc2$hour/24)
 ggplot(s_temp1 %>%
-         filter(doy >= 160 & doy <= 170), aes(DD, value, color=depth))+
+         filter(doy >= 170 & doy <= 180), aes(DD, value, color=depth))+
+  geom_point()+
+  geom_line()
+ggplot(swc1 %>%
+         filter(doy >= 177 & doy <= 180), aes(DD, value, color=depth))+
   geom_point()+
   geom_line()
 
 ggplot(s_temp2 %>%
-         filter(doy >= 160 & doy <= 170), aes(DD, value, color=depth))+
+         filter(doy >= 170 & doy <= 180), aes(DD, value, color=depth))+
   geom_point()+
   geom_line()
 ggplot(swc2 %>%
-         filter(doy >= 160 & doy <= 170), aes(DD, value, color=depth))+
+         filter(doy >= 170 & doy <= 180), aes(DD, value, color=depth))+
   geom_point()+
   geom_line()
 
