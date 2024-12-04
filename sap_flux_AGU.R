@@ -3,6 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(reshape2)
 
+
 dirSave <- "/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/AGU"
 
 ###### read in data -----
@@ -56,6 +57,24 @@ swc1 <- soil1DF %>%
 
 s_temp1 <- soil1DF %>%
   filter(type == "Temperature")
+s_temp1$DD <- (s_temp1$doy-1)+(s_temp1$hour/24)
+swc1$DD <- (swc1$doy-1)+(swc1$hour/24)
+
+s_temp2$DD <- (s_temp2$doy-1)+(s_temp2$hour/24)
+swc2$DD <- (swc2$doy-1)+(swc2$hour/24)
+ggplot(s_temp1 %>%
+         filter(doy >= 160 & doy <= 170), aes(DD, value, color=depth))+
+  geom_point()+
+  geom_line()
+
+ggplot(s_temp2 %>%
+         filter(doy >= 160 & doy <= 170), aes(DD, value, color=depth))+
+  geom_point()+
+  geom_line()
+ggplot(swc2 %>%
+         filter(doy >= 160 & doy <= 170), aes(DD, value, color=depth))+
+  geom_point()+
+  geom_line()
 
 day_st1 <- s_temp1 %>%
   group_by(doy, year, depth) %>%
@@ -332,7 +351,8 @@ ggplot(sapHSite, aes(x=date, y=sap_mm_h, color=Name))+
 
 ###### Organize data for graphing ----
 sapHSite <- sapHSite %>%
-  ungroup(doy, Hours)
+  ungroup(doy, Hours) %>%
+  filter(sap_mm_h < 100) # remove outliers
 sapHSite$DD <- sapHSite$doy + (sapHSite$Hours/24)
 siteHourGraph <- sapHSite %>%
   filter(doy <= 182)
@@ -375,13 +395,19 @@ dailyWf$precip_mm <- ifelse(dailyWf$DailyPrecipitation == "T",
                             as.numeric(dailyWf$DailyPrecipitation)*25.4)
 ###### Graphing parms ----
 colsSxS <- c("#C187C7", # permafrost picea
-            "#009F57", # bb picea
+            "#007C57", # bb picea
             "#ADDABC") # bb betula 
+colsSxStt <- c("#C187C799", # permafrost picea
+             "#007C5799", # bb picea
+             "#ADDABC99") # bb betula 
 
-depthsST1 <-  c("0.1", "0.18", "0.4", "0.75", "1.5")
+colsSite <- c("#C187C7", #permafrost
+              "#007C57")
+depthsST1 <-  c("0.1",  "0.4")
 depthsST2 <-  c("0.1", "0.5")
-depthsSW1 <- unique(swcGraph1$depth)
-depthsSW2 <- unique(swcGraph2$depth)
+depthsSW1 <- c("0.2",  "0.4")
+depthsSW2 <- c("0.1", "0.5")
+ltyDepth <- c(1,3)
             
 cols1ST <- hcl.colors(5, palette = "Purples2")
 cols1SW <- c(cols1ST[2],cols1ST[3], cols1ST[4])
@@ -471,15 +497,45 @@ png(paste0(dirSave, "/met_figure.png"), width=17, height=9, units="in", res=150)
 dev.off()
 
 
-# smith lake (permafrost ) ----
-png(paste0(dirSave, "/smith_lake_sf_soil.png"), width=17, height=11.5, units="in", res=150)
-  layout(matrix(seq(1,3),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd,hd)*2.54))
+# sap flow ----
+png(paste0(dirSave, "/sapflow_soil.png"), width=17, height=17, units="in", res=150)
+  layout(matrix(seq(1,4),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd,hd, hd)*2.54))
   par(mai= c(ma,ma,ma,ma))
   plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,160),
        type="n", axes=FALSE, yaxs="i", xaxs="i",
        xlab = " ", ylab= " ")
+  arrows(sapHour1$DD, sapHour1$lowerE,sapHour1$DD,
+         sapHour1$upperE, code=0, col=colsSxStt[1])
   points(sapHour1$DD, sapHour1$sap_mm_h, type="b",
          col=colsSxS[1], pch=19)
+
+  axis(1, dayseq , 
+       rep("", length(dayseq )),
+       cex.axis=ca)
+  mtext(dayseql ,
+        at=dayseq ,side=1, line=llxa, 
+        cex=cax)
+  axis(2, seq(0,160, by=20), cex.axis=ca, las=2)
+  mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+        cex=cma)
+  # sap flow bb
+  par(mai= c(ma,ma,ma,ma))
+  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,160),
+       type="n", axes=FALSE, yaxs="i", xaxs="i",
+       xlab = " ", ylab= " ")
+  arrows(sapHour2b$DD, sapHour2b$lowerE,sapHour2b$DD,
+         sapHour2b$upperE, code=0, col=colsSxStt[3])
+  arrows(sapHour2p$DD, sapHour2p$lowerE,sapHour2p$DD,
+         sapHour2p$upperE, code=0, col=colsSxStt[2])
+  points(sapHour2b$DD, 
+         sapHour2b$sap_mm_h, 
+         type="b",
+         col=colsSxS[3], pch=19)
+  points(sapHour2p$DD, 
+         sapHour2p$sap_mm_h, 
+         type="b",
+         col=colsSxS[2], pch=19)
+  
   axis(1, dayseq , 
        rep("", length(dayseq )),
        cex.axis=ca)
@@ -498,12 +554,20 @@ png(paste0(dirSave, "/smith_lake_sf_soil.png"), width=17, height=11.5, units="in
     stplot = stGraph1 %>%
       filter(depth == depthsST1[i])
     points(stplot$doy, stplot$stemp, type="l",
-           col=cols1ST[i], lwd=2)   
+           col=colsSite[1], lwd=2, lty=ltyDepth[i])   
+  }
+  for(i in 1:length(depthsST2)){
+    stplot = stGraph2 %>%
+      filter(depth == depthsST2[i])
+    points(stplot$doy, stplot$stemp, type="l",
+           col=colsSite[2], lwd=2, lty=ltyDepth[i])   
   }
   
   legend("topleft",
-         depthsST1, col=cols1ST,
+         c(depthsST1,depthsST2),
+         col=rep(colsSite,each=2),
          lwd=2,
+         lty=rep(ltyDepth, times=2),
          bty="n", cex=lgc, title="depth (m)")
   
   axis(1, dayseq , 
@@ -526,12 +590,21 @@ png(paste0(dirSave, "/smith_lake_sf_soil.png"), width=17, height=11.5, units="in
     swplot = swcGraph1 %>%
       filter(depth == depthsSW1[i])
     points(swplot$doy, swplot$swc, type="l",
-           col=cols1SW[i], lwd=2)   
+           col=colsSite[1], lwd=2, lty=ltyDepth[i])   
+  }
+  
+  for(i in 1:length(depthsSW2)){
+    swplot = swcGraph2 %>%
+      filter(depth == depthsSW2[i])
+    points(swplot$doy, swplot$swc, type="l",
+           col=colsSite[2], lwd=2, lty=ltyDepth[i])   
   }
   
   legend("topleft",
-         depthsSW1, col=cols1SW,
+         c(depthsST1,depthsST2),
+         col=rep(colsSite,each=2),
          lwd=2,
+         lty=rep(ltyDepth, times=2),
          bty="n", cex=lgc, title="depth (m)")
   axis(1, dayseq , 
        rep("", length(dayseq )),
@@ -552,13 +625,42 @@ png(paste0(dirSave, "/smith_lake_sf_soil.png"), width=17, height=11.5, units="in
 dev.off()
 
 
-# bb (no permafrost ) ----
-png(paste0(dirSave, "/bb_sf_soil.png"), width=17, height=11.5, units="in", res=150)
-layout(matrix(seq(1,3),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd,hd)*2.54))
+
+
+
+###### hourly trends ----
+
+wd <- 8
+hd <- 4
+png(paste0(dirSave, "/sapflow_soil_hour.png"), width=17, height=17, units="in", res=150)
+layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
 par(mai= c(ma,ma,ma,ma))
-plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,160),
+plot(c(0,1), c(0,1), xlim=c(160,170), ylim=c(0,160),
      type="n", axes=FALSE, yaxs="i", xaxs="i",
      xlab = " ", ylab= " ")
+arrows(sapHour1$DD, sapHour1$lowerE,sapHour1$DD,
+       sapHour1$upperE, code=0, col=colsSxStt[1])
+points(sapHour1$DD, sapHour1$sap_mm_h, type="b",
+       col=colsSxS[1], pch=19)
+
+axis(1, dayseq , 
+     rep("", length(dayseq )),
+     cex.axis=ca)
+mtext(dayseql ,
+      at=dayseq ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(0,160, by=20), cex.axis=ca, las=2)
+mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+      cex=cma)
+
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(160,170), ylim=c(0,160),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+arrows(sapHour2b$DD, sapHour2b$lowerE,sapHour2b$DD,
+       sapHour2b$upperE, code=0, col=colsSxStt[3])
+arrows(sapHour2p$DD, sapHour2p$lowerE,sapHour2p$DD,
+       sapHour2p$upperE, code=0, col=colsSxStt[2])
 points(sapHour2b$DD, 
        sapHour2b$sap_mm_h, 
        type="b",
@@ -577,64 +679,29 @@ mtext(dayseql ,
 axis(2, seq(0,160, by=20), cex.axis=ca, las=2)
 mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
       cex=cma)
-# soil temp
-par(mai= c(ma,ma,ma,ma))
-plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-4,16),
-     type="n", axes=FALSE, yaxs="i", xaxs="i",
-     xlab = " ", ylab= " ")
-for(i in 1:length(depthsST2)){
-  stplot = stGraph2 %>%
-    filter(depth == depthsST2[i])
-  points(stplot$doy, stplot$stemp, type="l",
-         col=cols2SW[i], lwd=2)   
-}
-
-legend("topleft",
-       depthsST2, col=cols2ST,
-       lwd=2,
-       bty="n", cex=lgc, title="depth (m)")
-
-axis(1, dayseq , 
-     rep("", length(dayseq )),
-     cex.axis=ca)
-mtext(dayseql ,
-      at=dayseq ,side=1, line=llxa, 
-      cex=cax)
-axis(2, seq(-4,16, by=4), cex.axis=ca, las=2)
-mtext(expression(paste("Soil temperature (",degree,"C)")), 
-      side=2, line=ll1,
-      cex=cma)
-
-
-par(mai= c(ma,ma,ma,ma))
-plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(0,0.65),
-     type="n", axes=FALSE, yaxs="i", xaxs="i",
-     xlab = " ", ylab= " ")
-for(i in 1:length(depthsSW2)){
-  swplot = swcGraph2 %>%
-    filter(depth == depthsSW2[i])
-  points(swplot$doy, swplot$swc, type="l",
-         col=cols2SW[i], lwd=2)   
-}
-
-legend("topleft",
-       depthsSW2, col=cols2SW,
-       lwd=2,
-       bty="n", cex=lgc, title="depth (m)")
-axis(1, dayseq , 
-     rep("", length(dayseq )),
-     cex.axis=ca)
-mtext(dayseql ,
-      at=dayseq ,side=1, line=llxa, 
-      cex=cax)
-axis(2, seq(0,0.6, by=0.2), cex.axis=ca, las=2)
-
-mtext(expression(paste("Soil moisture (m"^3,"m"^-3,")")),
-      side=2, line=ll1,
-      cex=cma)
-mtext("Day of year", side=1, line=ll1,
-      cex=cma)
-
-
-
 dev.off()
+###### max Js ----
+#sat vapor in kpa
+dailyWf$es <- (610.78 * exp((dailyWf$temp_c / (dailyWf$temp_c +237.3) * 17.2694)))/1000
+dailyWf$ea <- dailyWf$es*(dailyWf$DailyAverageRelativeHumidity/100)
+dailyWf$VPD <- dailyWf$es-dailyWf$ea
+
+maxJs <- siteHourGraph %>%
+  group_by(Name, doy) %>%
+  summarise(maxJs = max(sap_mm_h),
+            nmJ = n())
+
+
+dailyMax <- left_join(maxJs, dailyWf, by="doy")
+ggplot(dailyMax, aes(minT, maxJs, color=Name))+
+  geom_point()
+
+ggplot(dailyMax, aes(temp_c, maxJs, color=Name))+
+  geom_point()
+
+ggplot(dailyMax, aes(minT, maxJs, color=Name))+
+  geom_point()
+
+
+ggplot(dailyMax, aes(log(VPD), maxJs, color=Name))+
+  geom_point()
