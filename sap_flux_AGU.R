@@ -742,5 +742,35 @@ ggplot(dailyMaxs, aes(log(VPD), maxJs, color=Name))+
   geom_point()
 
 
+################
+#early focus
+plot(c(0,1), c(0,1), xlim=c(105,115), ylim=c(0,160),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+arrows(sapHour1$DD, sapHour1$lowerE,sapHour1$DD,
+       sapHour1$upperE, code=0, col=colsSxStt[1])
+points(sapHour1$DD, sapHour1$sap_mm_h, type="b",
+       col=colsSxS[1], pch=19)
 
+arrows(sapHour2b$DD, sapHour2b$lowerE,sapHour2b$DD,
+       sapHour2b$upperE, code=0, col=colsSxStt[3])
+arrows(sapHour2p$DD, sapHour2p$lowerE,sapHour2p$DD,
+       sapHour2p$upperE, code=0, col=colsSxStt[2])
+points(sapHour2b$DD, 
+       sapHour2b$sap_mm_h, 
+       type="b",
+       col=colsSxS[3], pch=19)
+points(sapHour2p$DD, 
+       sapHour2p$sap_mm_h, 
+       type="b",
+       col=colsSxS[2], pch=19)
+splot1 <- s_temp1 %>% filter(depth == 0)
+splot2 <- s_temp2 %>% filter(depth == 0)
+plot(c(0,1), c(0,1), xlim=c(100,125), ylim=c(-5,10),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+points(splot2$DD, splot2$value, col=colsSite[2], type="l")
+points(splot1$DD, splot1$value, col=colsSite[1], type="l")
 
+plot(splot2$DD, splot2$value, type="l")
+plot(splot1$DD, splot1$value, type="l")
