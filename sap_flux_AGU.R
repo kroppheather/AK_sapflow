@@ -2,7 +2,7 @@ library(lubridate)
 library(dplyr)
 library(ggplot2)
 library(reshape2)
-
+library(tidyr)
 
 dirSave <- "/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/AGU"
 
@@ -389,14 +389,23 @@ stGraph2 <- day_st2 %>%
   filter(doy <= 182 & doy >= 92)
 dailyW$doy <- yday(dailyW$date)
 dailyWj <- left_join(dailyW, dailyTemp, by=c("doy"))
+dailyWj$precip_mm <- as.numeric(ifelse(dailyWj$DailyPrecipitation == "T" |
+                              dailyWj$DailyPrecipitation == "Ts"  ,
+                            0,
+                            dailyWj$DailyPrecipitation))*25.4
+
+precipRoll <- rep(NA, 6)
+for(i in 7:nrow(dailyWj)){
+  precipRoll[i] <- sum(dailyWj$precip_mm[(i-6):i])
+  
+}
+dailyWj$weekPrecip_mm <- precipRoll
 
 dailyWf <- dailyWj %>%
   filter(doy <= 182 & doy >= 92)
 dailyWf$SD_m <- dailyWf$sDepth_cm/100
 dailyWf$temp_c <- (dailyWf$DailyAverageDryBulbTemperature-32)*(5/9)
-dailyWf$precip_mm <- ifelse(dailyWf$DailyPrecipitation == "T",
-                            0,
-                            as.numeric(dailyWf$DailyPrecipitation)*25.4)
+
 ###### Graphing parms ----
 colsSxS <- c("#C187C7", # permafrost picea
             "#007C57", # bb picea
@@ -691,21 +700,47 @@ dailyWf$ea <- dailyWf$es*(dailyWf$DailyAverageRelativeHumidity/100)
 dailyWf$VPD <- dailyWf$es-dailyWf$ea
 
 maxJs <- siteHourGraph %>%
-  group_by(Name, doy) %>%
+  group_by(Name, siteName, doy) %>%
   summarise(maxJs = max(sap_mm_h),
             nmJ = n())
+swcGraph1$siteName  <- rep("Permafrost", nrow(swcGraph1)) 
+swcGraph2$siteName  <- rep("Bicycle bumps", nrow(swcGraph2)) 
+swcDayR <- rbind(swcGraph1, swcGraph2)
+swcDay <- swcDayR %>%
+  filter(depth == "0.1" | depth == "0.2")
 
+stGraph1$siteName  <- rep("Permafrost", nrow(stGraph1)) 
+stGraph2$siteName  <- rep("Bicycle bumps", nrow(stGraph2)) 
+stDF1 <- stGraph1 %>%
+  filter(depth == "0" | depth == "0.1" | depth == "0.4") %>%
+  pivot_wider(names_from= depth, values_from=stemp)
+colnames(stDF1)[4:6] <- c("depth0", "depth1", "depth3")
+
+stDF2 <- stGraph2 %>%
+  filter(depth == "0" | depth == "0.1" | depth == "0.5") %>%
+  pivot_wider(names_from= depth, values_from=stemp)
+colnames(stDF2)[4:6] <- c("depth0", "depth1", "depth3")
+
+stDay <- rbind(stDF1, stDF2)
+soilDay <- left_join(swcDay, stDay, by=c("doy","year", "siteName"))
 
 dailyMax <- left_join(maxJs, dailyWf, by="doy")
-ggplot(dailyMax, aes(minT, maxJs, color=Name))+
-  geom_point()
+dailyMaxs <- left_join(dailyMax, soilDay, by=c("doy","siteName"))
 
-ggplot(dailyMax, aes(temp_c, maxJs, color=Name))+
-  geom_point()
-
-ggplot(dailyMax, aes(minT, maxJs, color=Name))+
+ggplot(dailyMaxs, aes(maxT, maxJs, color=Name))+
   geom_point()
 
 
-ggplot(dailyMax, aes(log(VPD), maxJs, color=Name))+
+ggplot(dailyMaxs, aes(depth0, maxJs, color=Name))+
   geom_point()
+
+
+ggplot(dailyMaxs, aes(depth1, maxJs, color=Name))+
+  geom_point()
+
+ggplot(dailyMaxs, aes(log(VPD), maxJs, color=Name))+
+  geom_point()
+
+
+
+
