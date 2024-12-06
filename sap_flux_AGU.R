@@ -320,9 +320,22 @@ ggplot(sapS2f %>% filter(sensor == 9|
   geom_line()+
   xlim(130,140)
 
+ggplot(sapS2f %>% filter(sensor == 9|
+                           sensor == 10|
+                           sensor == 11), 
+       aes(DD, K, color=as.factor(sensor)))+
+  geom_line()+
+  xlim(110,120)
+
+ggplot(sapS2f %>% filter( sensor == 11)%>%
+         filter(doy >= 110 & doy <= 120), 
+       aes(DD, dT, color=as.factor(sensor)))+
+  geom_line()+
+  scale_x_continuous(breaks=seq(110,120))
+
   ggplot(sapS2, aes(DD, K, color=as.factor(sensor)))+
   geom_line()+
-  xlim(90,110)
+  xlim(97,110)
 
 sapS1f$siteID <- rep(1, nrow(sapS1f))
 sapS2f$siteID <- rep(2, nrow(sapS2f))
