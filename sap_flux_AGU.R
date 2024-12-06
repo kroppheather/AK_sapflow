@@ -57,11 +57,13 @@ swc1 <- soil1DF %>%
 
 s_temp1 <- soil1DF %>%
   filter(type == "Temperature")
+air_temp1 <- soil1DF %>%
+  filter(type == "air.temp" )
+air_temp1$DD <-(air_temp1$doy-1)+(air_temp1$hour/24)
+
 s_temp1$DD <- (s_temp1$doy-1)+(s_temp1$hour/24)
 swc1$DD <- (swc1$doy-1)+(swc1$hour/24)
 
-s_temp2$DD <- (s_temp2$doy-1)+(s_temp2$hour/24)
-swc2$DD <- (swc2$doy-1)+(swc2$hour/24)
 ggplot(s_temp1 %>%
          filter(doy >= 170 & doy <= 180), aes(DD, value, color=depth))+
   geom_point()+
@@ -71,14 +73,6 @@ ggplot(swc1 %>%
   geom_point()+
   geom_line()
 
-ggplot(s_temp2 %>%
-         filter(doy >= 170 & doy <= 180), aes(DD, value, color=depth))+
-  geom_point()+
-  geom_line()
-ggplot(swc2 %>%
-         filter(doy >= 170 & doy <= 180), aes(DD, value, color=depth))+
-  geom_point()+
-  geom_line()
 
 day_st1 <- s_temp1 %>%
   group_by(doy, year, depth) %>%
@@ -122,6 +116,12 @@ swc2 <- soil2DF %>%
 
 s_temp2 <- soil2DF %>%
   filter(type == "Temp" | type == " Temp")
+
+air_temp2 <- soil2DF %>%
+  filter(type == "air.temp" )
+air_temp2$DD <-(air_temp2$doy-1)+(air_temp2$hour/24)
+s_temp2$DD <- (s_temp2$doy-1)+(s_temp2$hour/24)
+swc2$DD <- (swc2$doy-1)+(swc2$hour/24)
 
 day_st2 <- s_temp2 %>%
   group_by(doy, year, depth) %>%
@@ -269,6 +269,7 @@ maxnight1S1 <- dtSite1 %>%
 
 
 
+
 maxnight1S2 <- dtSite2 %>%
   group_by(sensor, doy) %>%
   filter(dT == max(dT),na.rm=TRUE)
@@ -290,7 +291,10 @@ maxJoinS1 <- data.frame(sensor=maxnightS1$sensor,
 maxJoinS2 <- data.frame(sensor=maxnightS2$sensor,
                         doy=maxnightS2$doy,
                         maxDT = maxnightS2$dT)
-
+ggplot(maxJoinS1, aes(doy,maxDT, color=as.factor(sensor)))+
+  geom_point()
+ggplot(maxJoinS2, aes(doy,maxDT, color=as.factor(sensor)))+
+  geom_point()
 sapS1 <- left_join(dtSite1, maxJoinS1, by=c("sensor","doy"))
 sapS2 <- left_join(dtSite2, maxJoinS2, by=c("sensor","doy"))
 
@@ -309,6 +313,16 @@ sapS1f <- sapS1 %>%
 
 sapS2f <- sapS2 %>%
   filter(sensor != 5 & sensor != 8)
+ggplot(sapS2f %>% filter(sensor == 9|
+                           sensor == 10|
+                           sensor == 11), 
+       aes(DD, K, color=as.factor(sensor)))+
+  geom_line()+
+  xlim(130,140)
+
+  ggplot(sapS2, aes(DD, K, color=as.factor(sensor)))+
+  geom_line()+
+  xlim(90,110)
 
 sapS1f$siteID <- rep(1, nrow(sapS1f))
 sapS2f$siteID <- rep(2, nrow(sapS2f))
@@ -330,6 +344,17 @@ sapHour$mm_h <- sapHour$sap_mm_s*60*60
 sapNorth <- sapHour %>%
   filter(Aspect == "N")
 
+ggplot(sapNorth %>% filter(siteID == 1),
+     aes(date, mm_h, color=as.factor(sensor)))+
+  geom_point()
+
+ggplot(sapNorth %>% filter(siteID == 2 & Genus == "Picea"),
+       aes(date, mm_h, color=as.factor(sensor)))+
+  geom_point()
+
+ggplot(sapNorth %>% filter(siteID == 2 & Genus == "Betula"),
+       aes(date, mm_h, color=as.factor(sensor)))+
+  geom_line()
 # sapwood relationship: extract depth allometry from Quiñonez-Piñón for PIGL and PIMA
 # sapwood area = pi(sd*DBH-sd^2) calculated from depth
 
@@ -387,6 +412,11 @@ swcGraph2 <- day_swc2 %>%
 
 stGraph2 <- day_st2 %>%
   filter(doy <= 182 & doy >= 92)
+airGraph1 <- air_temp1 %>%
+  filter(doy <= 182 & doy >= 92)
+airGraph2 <- air_temp2 %>%
+  filter(doy <= 182 & doy >= 92)
+
 dailyW$doy <- yday(dailyW$date)
 dailyWj <- left_join(dailyW, dailyTemp, by=c("doy"))
 dailyWj$precip_mm <- as.numeric(ifelse(dailyWj$DailyPrecipitation == "T" |
@@ -643,12 +673,36 @@ dev.off()
 
 ###### hourly trends ----
 
+###### Daily/Hourly graphs ----
+# make graphs of data by doy
+
+
+# cex axis
+ca <- 2.5
+# line for first label
+ll1 <- 4
+# line for doy
+llxa <- 1.75
+# cex for label text
+cma <- 2
+# cex for doy labels
+cax <- 2
+# legend size
+lgc <- 2
+# mai size
+ma <- 0.6
+# day seq
+dl <- 109
+du <-120
+dayseq <- seq(dl,du, by=0.5)
+dayseql <- seq(dl,du, by=1)
+
 wd <- 8
 hd <- 4
-png(paste0(dirSave, "/sapflow_soil_hour.png"), width=17, height=17, units="in", res=150)
+png(paste0(dirSave, "/sapflow_soil_hour.png"), width=9, height=9, units="in", res=150)
 layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
 par(mai= c(ma,ma,ma,ma))
-plot(c(0,1), c(0,1), xlim=c(160,170), ylim=c(0,160),
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
      type="n", axes=FALSE, yaxs="i", xaxs="i",
      xlab = " ", ylab= " ")
 arrows(sapHour1$DD, sapHour1$lowerE,sapHour1$DD,
@@ -656,20 +710,6 @@ arrows(sapHour1$DD, sapHour1$lowerE,sapHour1$DD,
 points(sapHour1$DD, sapHour1$sap_mm_h, type="b",
        col=colsSxS[1], pch=19)
 
-axis(1, dayseq , 
-     rep("", length(dayseq )),
-     cex.axis=ca)
-mtext(dayseql ,
-      at=dayseq ,side=1, line=llxa, 
-      cex=cax)
-axis(2, seq(0,160, by=20), cex.axis=ca, las=2)
-mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
-      cex=cma)
-
-par(mai= c(ma,ma,ma,ma))
-plot(c(0,1), c(0,1), xlim=c(160,170), ylim=c(0,160),
-     type="n", axes=FALSE, yaxs="i", xaxs="i",
-     xlab = " ", ylab= " ")
 arrows(sapHour2b$DD, sapHour2b$lowerE,sapHour2b$DD,
        sapHour2b$upperE, code=0, col=colsSxStt[3])
 arrows(sapHour2p$DD, sapHour2p$lowerE,sapHour2p$DD,
@@ -683,15 +723,31 @@ points(sapHour2p$DD,
        type="b",
        col=colsSxS[2], pch=19)
 
+
 axis(1, dayseq , 
      rep("", length(dayseq )),
      cex.axis=ca)
 mtext(dayseql ,
-      at=dayseq ,side=1, line=llxa, 
+      at=dayseql ,side=1, line=llxa, 
       cex=cax)
 axis(2, seq(0,160, by=20), cex.axis=ca, las=2)
 mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
       cex=cma)
+
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(-15,20),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+points(airGraph2$DD, airGraph2$value, col=colsSite[2], type="l")
+points(airGraph1$DD, airGraph1$value, col=colsSite[1], type="l")
+axis(1, dayseq , 
+     rep("",length(dayseq )),
+     cex.axis=ca)
+mtext(dayseql ,
+      at=dayseql ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(-15,20, by=5), cex.axis=ca, las=2)
+
 dev.off()
 ###### max Js ----
 #sat vapor in kpa
@@ -766,7 +822,7 @@ points(sapHour2p$DD,
        col=colsSxS[2], pch=19)
 splot1 <- s_temp1 %>% filter(depth == 0)
 splot2 <- s_temp2 %>% filter(depth == 0)
-plot(c(0,1), c(0,1), xlim=c(100,125), ylim=c(-5,10),
+plot(c(0,1), c(0,1), xlim=c(105,115), ylim=c(-5,10),
      type="n", axes=FALSE, yaxs="i", xaxs="i",
      xlab = " ", ylab= " ")
 points(splot2$DD, splot2$value, col=colsSite[2], type="l")
