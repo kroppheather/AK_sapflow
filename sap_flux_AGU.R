@@ -167,11 +167,13 @@ hourW$Precip_mm <- as.numeric(hourW$HourlyPrecipitation)*25.4
 hourW$TempC <- (as.numeric(hourW$HourlyDryBulbTemperature)- 32) * (5/9)
 ggplot(hourW, aes(date,TempC))+
   geom_line()
-
-dailyTemp <- hourW %>%
-  group_by(doy, year) %>%
-  summarise(minT = min(TempC, na.rm=TRUE),
-            maxT = max(TempC, na.rm=TRUE))
+air_temp2$siteName <- rep("Bicycle bumps", nrow(air_temp2))
+air_temp1$siteName <- rep("Permafrost", nrow(air_temp1))
+air_all <- rbind(air_temp1,air_temp2)
+dailyTemp <- air_all %>%
+  group_by(doy, year, siteName) %>%
+  summarise(minT = min(value, na.rm=TRUE),
+            maxT = max(value, na.rm=TRUE))
 ###### allometry -----
 # Quiñonez-Piñón and Valero found there was no significant relationship
 # between dbh and sapwood between 10-40 cm dbh
@@ -431,7 +433,6 @@ airGraph2 <- air_temp2 %>%
   filter(doy <= 182 & doy >= 92)
 
 dailyW$doy <- yday(dailyW$date)
-dailyWj <- left_join(dailyW, dailyTemp, by=c("doy"))
 dailyWj$precip_mm <- as.numeric(ifelse(dailyWj$DailyPrecipitation == "T" |
                               dailyWj$DailyPrecipitation == "Ts"  ,
                             0,
@@ -498,13 +499,21 @@ dayseql <- c("",seq(100,180, by=10))
 png(paste0(dirSave, "/met_figure.png"), width=17, height=9, units="in", res=150)
   layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
   par(mai= c(ma,ma,ma,ma))
-  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-18,30),
+  plot(c(0,1), c(0,1), xlim=c(92,182), ylim=c(-19,30),
        type="n", axes=FALSE, yaxs="i", xaxs="i",
        xlab = " ", ylab= " ")
-  points(dailyWf$doy, dailyWf$minT,
-         type="l", pch=19, col="cadetblue3", lwd=2)
-  points(dailyWf$doy, dailyWf$maxT,
-         type="l", pch=19, col="tomato3", lwd=2)
+  points(dailyTemp$doy[dailyTemp$siteName == "Bicycle bumps"], 
+         dailyTemp$minT[dailyTemp$siteName == "Bicycle bumps"],
+         type="l", pch=19, col=colsSite[2], lwd=2, lty=3)
+  points(dailyTemp$doy[dailyTemp$siteName == "Permafrost"], 
+         dailyTemp$minT[dailyTemp$siteName == "Permafrost"],
+         type="l", pch=19, col=colsSite[1], lwd=2, lty=3)
+  points(dailyTemp$doy[dailyTemp$siteName == "Bicycle bumps"], 
+         dailyTemp$maxT[dailyTemp$siteName == "Bicycle bumps"],
+         type="l", pch=19, col=colsSite[2], lwd=2)
+  points(dailyTemp$doy[dailyTemp$siteName == "Permafrost"], 
+         dailyTemp$maxT[dailyTemp$siteName == "Permafrost"],
+         type="l", pch=19, col=colsSite[1], lwd=2)
   abline(h=0, lty=2)
   axis(2, seq(-15,25, by=5), cex.axis=ca, las=2)
   axis(1, dayseq , 
@@ -516,8 +525,7 @@ png(paste0(dirSave, "/met_figure.png"), width=17, height=9, units="in", res=150)
   mtext("Air temperature (C)", side=2, line=ll1,
         cex=cma)
   legend("bottomright", c("Daily minimum", "Daily maximum"),
-         lty=c(1,1), 
-         col=c("cadetblue3","tomato3"),
+         lty=c(3,1),
          bty="n", cex=lgc)
 # precip
   par(mai= c(ma,ma,ma,ma))
@@ -706,13 +714,13 @@ lgc <- 2
 ma <- 0.6
 # day seq
 dl <- 109
-du <-120
+du <-117
 dayseq <- seq(dl,du, by=0.5)
 dayseql <- seq(dl,du, by=1)
 
 wd <- 8
 hd <- 4
-png(paste0(dirSave, "/sapflow_soil_hour.png"), width=9, height=9, units="in", res=150)
+png(paste0(dirSave, "/sapflow_soil_hour.png"), width=9.5, height=9, units="in", res=150)
 layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
 par(mai= c(ma,ma,ma,ma))
 plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
@@ -748,7 +756,7 @@ mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
       cex=cma)
 
 par(mai= c(ma,ma,ma,ma))
-plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(-15,20),
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(-10,18),
      type="n", axes=FALSE, yaxs="i", xaxs="i",
      xlab = " ", ylab= " ")
 points(airGraph2$DD, airGraph2$value, col=colsSite[2], type="l")
@@ -760,15 +768,78 @@ mtext(dayseql ,
       at=dayseql ,side=1, line=llxa, 
       cex=cax)
 axis(2, seq(-15,20, by=5), cex.axis=ca, las=2)
-
+mtext(expression(paste("Air temperature (",degree,"C)")), side=2, line=ll1,
+      cex=cma)
 dev.off()
+
+
+# day seq
+wd <- 8
+hd <- 4
+dl2 <- 153
+du2 <-163
+dayseq2 <- seq(dl2,du2, by=0.5)
+dayseql2 <- seq(dl2,du2, by=1)
+
+png(paste0(dirSave, "/sapflow_soil_hour2.png"), width=9.5, height=9, units="in", res=150)
+layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(dl2,du2), ylim=c(0,100),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+arrows(sapHour1$DD, sapHour1$lowerE,sapHour1$DD,
+       sapHour1$upperE, code=0, col=colsSxStt[1])
+points(sapHour1$DD, sapHour1$sap_mm_h, type="b",
+       col=colsSxS[1], pch=19)
+
+arrows(sapHour2b$DD, sapHour2b$lowerE,sapHour2b$DD,
+       sapHour2b$upperE, code=0, col=colsSxStt[3])
+arrows(sapHour2p$DD, sapHour2p$lowerE,sapHour2p$DD,
+       sapHour2p$upperE, code=0, col=colsSxStt[2])
+points(sapHour2b$DD, 
+       sapHour2b$sap_mm_h, 
+       type="b",
+       col=colsSxS[3], pch=19)
+points(sapHour2p$DD, 
+       sapHour2p$sap_mm_h, 
+       type="b",
+       col=colsSxS[2], pch=19)
+
+
+axis(1, dayseq2 , 
+     rep("", length(dayseq2 )),
+     cex.axis=ca)
+mtext(dayseql2 ,
+      at=dayseql2 ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(0,100, by=20), cex.axis=ca, las=2)
+mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+      cex=cma)
+
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(dl2,du2), ylim=c(0,30),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+points(airGraph2$DD, airGraph2$value, col=colsSite[2], type="l")
+points(airGraph1$DD, airGraph1$value, col=colsSite[1], type="l")
+axis(1, dayseq2 , 
+     rep("",length(dayseq2 )),
+     cex.axis=ca)
+mtext(dayseql2 ,
+      at=dayseql2 ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(0,30, by=5), cex.axis=ca, las=2)
+mtext(expression(paste("Air temperature (",degree,"C)")), side=2, line=ll1,
+      cex=cma)
+dev.off()
+
 ###### max Js ----
 #sat vapor in kpa
 dailyWf$es <- (610.78 * exp((dailyWf$temp_c / (dailyWf$temp_c +237.3) * 17.2694)))/1000
 dailyWf$ea <- dailyWf$es*(dailyWf$DailyAverageRelativeHumidity/100)
 dailyWf$VPD <- dailyWf$es-dailyWf$ea
 
-maxJs <- siteHourGraph %>%
+maxJs <- na.omit(siteHourGraph) %>%
   group_by(Name, siteName, doy) %>%
   summarise(maxJs = max(sap_mm_h),
             nmJ = n())
@@ -796,8 +867,149 @@ soilDay <- left_join(swcDay, stDay, by=c("doy","year", "siteName"))
 dailyMax <- left_join(maxJs, dailyWf, by="doy")
 dailyMaxs <- left_join(dailyMax, soilDay, by=c("doy","siteName"))
 
-ggplot(dailyMaxs, aes(maxT, maxJs, color=Name))+
-  geom_point()
+dayB <- dailyMaxs %>%
+  filter(Name == "Bicycle bumps Betula")
+dayPG <- dailyMaxs %>%
+  filter(Name == "Bicycle bumps Picea")
+dayPM <- dailyMaxs %>%
+  filter(Name == "Permafrost Picea")
+
+tempPM <- lm(dayPM$maxJs ~ dayPM$maxT)
+summary(tempPM)
+tempPG <- lm(dayPG$maxJs ~ dayPG$maxT)
+summary(tempPG)
+tempB <- lm(dayB$maxJs ~ dayB$maxT)
+summary(tempB)
+
+qqnorm(rstandard(tempPM))
+qqline(rstandard(tempPM))
+qqnorm(rstandard(tempPG))
+qqline(rstandard(tempPG))
+qqnorm(rstandard(tempB))
+qqline(rstandard(tempB))
+plot(fitted(tempB),rstandard(tempB))
+abline(h=0)
+plot(fitted(tempPG),rstandard(tempPG))
+abline(h=0)
+plot(fitted(tempB),rstandard(tempB))
+abline(h=0)
+
+
+# cex axis
+ca <- 2.5
+# line for first label
+ll1 <- 4
+# line for doy
+llxa <- 1.75
+# cex for label text
+cma <- 2
+# cex for doy labels
+cax <- 2
+# legend size
+lgc <- 2
+# mai size
+ma <- 0.6
+
+wd <- 5
+hd <- 5
+png(paste0(dirSave, "/maxTemp_trends.png"), width=7, height=7, units="in", res=150)
+layout(matrix(seq(1),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd)*2.54))
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(-1,31), ylim=c(0,100),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+points(dayB$maxT,dayB$maxJs, pch=19, col=colsSxS[3])
+points(dayPG$maxT,dayPG$maxJs, pch=19, col=colsSxS[2])
+points(dayPM$maxT,dayPM$maxJs, pch=19, col=colsSxS[1])
+abline(tempPM, col=colsSxS[1])
+abline(tempPG, col=colsSxS[2])
+abline(tempB, col=colsSxS[3])
+
+axis(1, seq(0,30, by=5), rep("", length(seq(0,30, by=5))),
+     cex.axis=ca)
+mtext(seq(0,30, by=5),
+      at=seq(0,30, by=5) ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(0,100, by=20), cex.axis=ca, las=2)
+mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+      cex=cma)
+mtext(expression(paste("Maximum daily temperature (",degree,"C)")), side=1, line=ll1,
+      cex=cma)
+
+dev.off()
+
+
+vpdPM <- lm(dayPM$maxJs ~ log(dayPM$VPD))
+summary(vpdPM)
+vpdPG <- lm(dayPG$maxJs ~ log(dayPM$VPD))
+summary(vpdPG)
+vpdB <- lm(dayB$maxJs ~ log(dayPM$VPD))
+summary(vpdB)
+
+qqnorm(rstandard(vpdPM))
+qqline(rstandard(vpdPM))
+qqnorm(rstandard(vpdPG))
+qqline(rstandard(vpdPG))
+qqnorm(rstandard(vpdB))
+qqline(rstandard(vpdB))
+plot(fitted(vpdB),rstandard(vpdB))
+abline(h=0)
+plot(fitted(vpdPG),rstandard(vpdPG))
+abline(h=0)
+plot(fitted(vpdB),rstandard(vpdB))
+abline(h=0)
+
+png(paste0(dirSave, "/vpd_trends.png"), width=7, height=7, units="in", res=150)
+layout(matrix(seq(1),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd)*2.54))
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(-2,0.7), ylim=c(0,100),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+points(log(dayB$VPD),dayB$maxJs, pch=19, col=colsSxS[3])
+points(log(dayPG$VPD),dayPG$maxJs, pch=19, col=colsSxS[2])
+points(log(dayPM$VPD),dayPM$maxJs, pch=19, col=colsSxS[1])
+abline(vpdPM, col=colsSxS[1])
+abline(vpdPG, col=colsSxS[2])
+abline(vpdB, col=colsSxS[3])
+
+axis(1, seq(-2,0.75, by=0.25), rep("", length(seq(-2,0.75, by=0.25))),
+     cex.axis=ca)
+mtext(seq(-2,0.5, by=0.5),
+      at=seq(-2,0.5, by=0.5) ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(0,100, by=20), cex.axis=ca, las=2)
+mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+      cex=cma)
+mtext("Log-scale Vapor pressure deficit (log(KPa))", side=1, line=ll1,
+      cex=cma)
+
+dev.off()
+
+
+png(paste0(dirSave, "/soil_trends.png"), width=7, height=7, units="in", res=150)
+layout(matrix(seq(1),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd)*2.54))
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(-4,15), ylim=c(0,100),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab= " ")
+points(dayB$depth1,dayB$maxJs, pch=19, col=colsSxS[3])
+points(dayPG$depth1,dayPG$maxJs, pch=19, col=colsSxS[2])
+points(dayPM$depth1,dayPM$maxJs, pch=19, col=colsSxS[1])
+
+
+axis(1, seq(-5,15, by=5), rep("", length(seq(-5,15, by=5))),
+     cex.axis=ca)
+mtext(seq(0,15, by=5),
+      at=seq(0,15, by=5) ,side=1, line=llxa, 
+      cex=cax)
+axis(2, seq(0,100, by=20), cex.axis=ca, las=2)
+mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+      cex=cma)
+mtext(expression(paste("Soil temperature (0.1 m,",degree,"C)")), side=1, line=ll1,
+      cex=cma)
+
+dev.off()
+
 
 
 ggplot(dailyMaxs, aes(depth0, maxJs, color=Name))+
@@ -811,35 +1023,3 @@ ggplot(dailyMaxs, aes(log(VPD), maxJs, color=Name))+
   geom_point()
 
 
-################
-#early focus
-plot(c(0,1), c(0,1), xlim=c(105,115), ylim=c(0,160),
-     type="n", axes=FALSE, yaxs="i", xaxs="i",
-     xlab = " ", ylab= " ")
-arrows(sapHour1$DD, sapHour1$lowerE,sapHour1$DD,
-       sapHour1$upperE, code=0, col=colsSxStt[1])
-points(sapHour1$DD, sapHour1$sap_mm_h, type="b",
-       col=colsSxS[1], pch=19)
-
-arrows(sapHour2b$DD, sapHour2b$lowerE,sapHour2b$DD,
-       sapHour2b$upperE, code=0, col=colsSxStt[3])
-arrows(sapHour2p$DD, sapHour2p$lowerE,sapHour2p$DD,
-       sapHour2p$upperE, code=0, col=colsSxStt[2])
-points(sapHour2b$DD, 
-       sapHour2b$sap_mm_h, 
-       type="b",
-       col=colsSxS[3], pch=19)
-points(sapHour2p$DD, 
-       sapHour2p$sap_mm_h, 
-       type="b",
-       col=colsSxS[2], pch=19)
-splot1 <- s_temp1 %>% filter(depth == 0)
-splot2 <- s_temp2 %>% filter(depth == 0)
-plot(c(0,1), c(0,1), xlim=c(105,115), ylim=c(-5,10),
-     type="n", axes=FALSE, yaxs="i", xaxs="i",
-     xlab = " ", ylab= " ")
-points(splot2$DD, splot2$value, col=colsSite[2], type="l")
-points(splot1$DD, splot1$value, col=colsSite[1], type="l")
-
-plot(splot2$DD, splot2$value, type="l")
-plot(splot1$DD, splot1$value, type="l")
