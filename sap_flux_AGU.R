@@ -433,6 +433,7 @@ airGraph2 <- air_temp2 %>%
   filter(doy <= 182 & doy >= 92)
 
 dailyW$doy <- yday(dailyW$date)
+dailyWj <- dailyW
 dailyWj$precip_mm <- as.numeric(ifelse(dailyWj$DailyPrecipitation == "T" |
                               dailyWj$DailyPrecipitation == "Ts"  ,
                             0,
@@ -865,8 +866,8 @@ stDay <- rbind(stDF1, stDF2)
 soilDay <- left_join(swcDay, stDay, by=c("doy","year", "siteName"))
 
 dailyMax <- left_join(maxJs, dailyWf, by="doy")
-dailyMaxs <- left_join(dailyMax, soilDay, by=c("doy","siteName"))
-
+dailyMaxs1 <- left_join(dailyMax, soilDay, by=c("doy","siteName"))
+dailyMaxs <- left_join(dailyMaxs1, dailyTemp, by=c("doy","siteName"))
 dayB <- dailyMaxs %>%
   filter(Name == "Bicycle bumps Betula")
 dayPG <- dailyMaxs %>%
