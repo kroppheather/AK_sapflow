@@ -7,11 +7,10 @@ library(reshape2)
 sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors 2.csv")
 # permafrost spruce
 
-site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/10_08_2024/CR1000_sap_sl2_TableTC.dat",
+site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/05_07_2025/CR1000_sap_sl2_TableTC.dat",
                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-site1 <- site1[,1:12] 
-
+site1 <- site1b[,1:12] 
 
 # deciduous non-permafrost
 site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/07_03_2024/Sapflow_TableDT.dat",
@@ -170,6 +169,7 @@ site1$DD <- site1$doy + (site1$hour/24)
 
 dtSite1 <- data.frame(date= rep(site1$date, times = 8), 
                       doy = rep(site1$doy, times = 8),
+                      year = rep(site1$year, times=8),
                       hourD = rep(site1$hour, times = 8),
                       DD = rep(site1$DD, times = 8),
                       sensor = rep(seq(1,8), each = nrow(site1)), 
@@ -182,6 +182,12 @@ dtSite1 <- data.frame(date= rep(site1$date, times = 8),
                                         site1[,11],
                                         site1[,12])))
 
+dtSite1$YDD <- dtSite1$year + ((dtSite1$DD-1)/365)
+ggplot(dtSite1, aes(YDD, dT, color=as.factor(sensor)))+
+  geom_point()
+ggplot(dtSite1%>% filter(sensor==10), aes(YDD, dT, color=as.factor(sensor)))+
+  geom_point()
+  
 dtSite2 <- data.frame(date= rep(site2$date, times = 11), 
                      doy = rep(site2$doy, times = 11),
                      hourD = rep(site2$hour, times = 11),
