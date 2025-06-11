@@ -185,7 +185,7 @@ dtSite1 <- data.frame(date= rep(site1$date, times = 8),
 dtSite1$YDD <- dtSite1$year + ((dtSite1$DD-1)/365)
 ggplot(dtSite1, aes(YDD, dT, color=as.factor(sensor)))+
   geom_point()
-ggplot(dtSite1%>% filter(sensor==10), aes(YDD, dT, color=as.factor(sensor)))+
+ggplot(dtSite1%>% filter(sensor==2), aes(YDD, dT, color=as.factor(sensor)))+
   geom_point()
   
 dtSite2 <- data.frame(date= rep(site2$date, times = 11), 
