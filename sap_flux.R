@@ -387,7 +387,7 @@ ggplot(sapHourJune %>% filter(siteID == 2),
 # look at averages for site and genus
 sapHSite <- sapNorth %>%
   na.omit() %>%
-  group_by(Hours, doy, date, siteID, siteName, Genus) %>%
+  group_by(Hours, doy, year, DD,date, siteID, siteName, Genus) %>%
   summarise(sap_mm_h = mean(mm_h),
             sd_mm_h = sd(mm_h), 
             n_mm_h = n())
@@ -397,7 +397,24 @@ sapHSite$lowerE <- sapHSite$sap_mm_h - sapHSite$se
 sapHSite$upperE <- sapHSite$sap_mm_h + sapHSite$se
 ggplot(sapHSite, aes(x=date, y=sap_mm_h, color=Name))+
   geom_line()+
-  geom_point()
+  geom_point()+ylim(0,100)
+
+
+ggplot(sapHSite%>%filter(year==2025), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_line()+
+  geom_point()+ylim(0,100)
+
+ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 100 & doy <= 130), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
+  geom_line()+
+  geom_point()+ylim(0,100)
+
+ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 130 & doy <= 160), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
+  geom_line()+
+  geom_point()+ylim(0,100)
+
+ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 160 & doy <= 190), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
+  geom_line()+
+  geom_point()+ylim(0,100)
   
 siteHourApril <- sapHSite %>%
   filter(doy < 122)
