@@ -7,10 +7,10 @@ library(reshape2)
 sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors 2.csv")
 # permafrost spruce
 
-site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/05_07_2025/CR1000_sap_sl2_TableTC.dat",
+site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_18_2025/Loranty CR1000_TableTC.dat",
                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-site1 <- site1b[,1:12] 
+site1 <- site1[,1:12] 
 
 # deciduous non-permafrost
 site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/07_03_2024/Sapflow_TableDT.dat",
@@ -192,6 +192,7 @@ ggplot(dtSite1%>% filter(sensor==5&year==2025), aes(DD, dT, color=as.factor(sens
   
 dtSite2 <- data.frame(date= rep(site2$date, times = 11), 
                      doy = rep(site2$doy, times = 11),
+                     year= rep(site2$year, times=11),
                      hourD = rep(site2$hour, times = 11),
                      DD = rep(site2$DD, times = 11),
                      sensor = rep(seq(1,11), each = nrow(site2)), 
@@ -206,7 +207,7 @@ dtSite2 <- data.frame(date= rep(site2$date, times = 11),
                             site2[,11],
                             site2[,12],
                             site2[,13])))
-
+dtSite2$YDD <- dtSite2$year + ((dtSite2$DD-1)/365)
 tail(unique(dtSite2$dT))
 
 dtSite2 <- dtSite2 %>%
@@ -242,35 +243,37 @@ ggplot(dtSite1 %>% filter(sensor ==4), aes(date, dT, color=as.factor(sensor)))+
 
 # compare max day
 maxnight1S1 <- dtSite1 %>%
-  group_by(sensor, doy) %>%
+  group_by(sensor, doy,year) %>%
   filter(dT == max(dT),na.rm=TRUE)
 
 
 
 maxnight1S2 <- dtSite2 %>%
-  group_by(sensor, doy) %>%
+  group_by(sensor, doy,year) %>%
   filter(dT == max(dT),na.rm=TRUE)
 
 #remove duplicate maximums that occur for longer than 15 min
 #just take earliest measurement
 maxnightS1 <- maxnight1S1   %>%
-  group_by(sensor, doy) %>%
+  group_by(sensor, doy,year) %>%
   filter(hourD == min(hourD),na.rm=TRUE)
 
 maxnightS2 <- maxnight1S2   %>%
-  group_by(sensor, doy) %>%
+  group_by(sensor, doy, year) %>%
   filter(hourD == min(hourD),na.rm=TRUE)
 
 maxJoinS1 <- data.frame(sensor=maxnightS1$sensor,
                       doy=maxnightS1$doy,
+                      year=maxnightS1$year,
                       maxDT = maxnightS1$dT)
 
 maxJoinS2 <- data.frame(sensor=maxnightS2$sensor,
                         doy=maxnightS2$doy,
+                        year=maxnightS2$year,
                         maxDT = maxnightS2$dT)
 
-sapS1 <- left_join(dtSite1, maxJoinS1, by=c("sensor","doy"))
-sapS2 <- left_join(dtSite2, maxJoinS2, by=c("sensor","doy"))
+sapS1 <- left_join(dtSite1, maxJoinS1, by=c("sensor","doy","year"))
+sapS2 <- left_join(dtSite2, maxJoinS2, by=c("sensor","doy","year"))
 
 # m3 H2O m–2 (sapwood) s–1 or m s-1
 sapS1$K <- (sapS1$maxDT - sapS1$dT)/sapS1$dT
@@ -298,10 +301,11 @@ sapAll$Hours <- floor(sapAll$hourD)
 sapAll$dayDate <- as.Date(sapAll$date)
 # get hourly average for easier plotting
 sapHour <- sapAll %>%
-  group_by(Hours, doy, dayDate,siteID, sensor, Aspect,  siteName, Genus) %>%
+  group_by(Hours, doy, year, dayDate,siteID, sensor, Aspect,  siteName, Genus) %>%
   summarise(sap_mm_s= mean(mm_s, na.rm=TRUE))
 
 sapHour$date <- ymd_hm(paste(sapHour$dayDate, sapHour$Hours, ":00"))
+sapHour$DD <- sapHour$doy+(sapHour$Hours/24)
 # mm/s * 60s/min*60min/hr
 sapHour$mm_h <- sapHour$sap_mm_s*60*60
 # start by just looking at North
@@ -317,7 +321,12 @@ sapHourMay <- sapNorth %>%
 sapHourJune <- sapNorth %>%
   filter(doy >= 153)
 
-ggplot(sapHourApril %>% filter(siteID == 1), 
+ggplot(sapHourApril %>% filter(siteID == 1&year==2024), 
+       aes(x=date, y= mm_h, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()+
+  theme_classic()
+ggplot(sapHourApril %>% filter(siteID == 1&year==2025), 
        aes(x=date, y= mm_h, color=as.factor(sensor)))+
   geom_point()+
   geom_line()+
@@ -325,6 +334,28 @@ ggplot(sapHourApril %>% filter(siteID == 1),
 
 ggplot(sapHourApril %>% filter(siteID == 2), 
        aes(x=date, y= mm_h, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()+
+  theme_classic()
+
+ggplot(sapHourApril %>% filter(siteID == 1&sensor==2), 
+       aes(x=DD, y= mm_h, color=as.factor(year)))+
+  geom_point()+
+  geom_line()+
+  theme_classic()
+
+ggplot(sapHourApril %>% filter(siteID == 1&sensor==3), 
+       aes(x=DD, y= mm_h, color=as.factor(year)))+
+  geom_point()+
+  geom_line()+
+  theme_classic()
+ggplot(sapHourApril %>% filter(siteID == 1&sensor==5), 
+       aes(x=DD, y= mm_h, color=as.factor(year)))+
+  geom_point()+
+  geom_line()+
+  theme_classic()
+ggplot(sapHourApril %>% filter(siteID == 1&sensor==7), 
+       aes(x=DD, y= mm_h, color=as.factor(year)))+
   geom_point()+
   geom_line()+
   theme_classic()
