@@ -399,6 +399,10 @@ ggplot(sapHSite, aes(x=date, y=sap_mm_h, color=Name))+
   geom_line()+
   geom_point()+ylim(0,100)
 
+ggplot(sapHour%>%filter(doy>=270&doy<=290&siteID == 1), aes(x=DD, y=sap_mm_s, color=as.factor(sensor)))+
+  geom_line()+
+  geom_point()+ylim(0,0.025)
+
 
 ggplot(sapHSite%>%filter(year==2025), aes(x=date, y=sap_mm_h, color=Name))+
   geom_line()+
