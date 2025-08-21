@@ -18,7 +18,7 @@ site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamil
 
 site2 <- site2[,1:13]  
 ## weather 
-weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/3822739.csv")
+weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/4102934.csv")
 
 ## soil
 soil1 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv",
@@ -185,9 +185,10 @@ dtSite1 <- data.frame(date= rep(site1$date, times = 8),
 dtSite1$YDD <- dtSite1$year + ((dtSite1$DD-1)/365)
 ggplot(dtSite1, aes(YDD, dT, color=as.factor(sensor)))+
   geom_point()
-ggplot(dtSite1%>% filter(sensor==2), aes(YDD, dT, color=as.factor(sensor)))+
-  geom_point()
-ggplot(dtSite1%>% filter(sensor==5&year==2025), aes(DD, dT, color=as.factor(sensor)))+
+ggplot(dtSite1%>% filter(sensor==2&year==2025&doy>160&doy<180), aes(DD, dT, color=as.factor(sensor)))+
+  geom_point(size=0.1)+
+  geom_line()
+ggplot(dtSite1%>% filter(sensor==5&year==2024), aes(DD, dT, color=as.factor(sensor)))+
   geom_point()
   
 dtSite2 <- data.frame(date= rep(site2$date, times = 11), 
@@ -327,6 +328,12 @@ ggplot(sapHourApril %>% filter(siteID == 1&year==2024),
   geom_line()+
   theme_classic()
 ggplot(sapHourApril %>% filter(siteID == 1&year==2025), 
+       aes(x=date, y= mm_h, color=as.factor(sensor)))+
+  geom_point()+
+  geom_line()+
+  theme_classic()
+
+ggplot(sapHour %>% filter(siteID == 1&year==2025&sensor==8&doy>130&doy<132), 
        aes(x=date, y= mm_h, color=as.factor(sensor)))+
   geom_point()+
   geom_line()+
