@@ -4,7 +4,7 @@ library(ggplot2)
 library(reshape2)
 
 # read in data
-sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors 2.csv")
+sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors.csv")
 # permafrost spruce
 
 site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_18_2025/Loranty CR1000_TableTC.dat",
@@ -17,6 +17,21 @@ site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamil
                     sep=",", header=FALSE, skip=4)
 
 site2 <- site2[,1:13]  
+
+
+# updated data:
+site1b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
+                    sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
+site1b <- site1[,1:12] 
+
+# updated data:
+site2b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000XSeries_TableDT.dat",
+                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
+site2b <- site2b[,1:19] 
+
+
 ## weather 
 weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/4102934.csv")
 
