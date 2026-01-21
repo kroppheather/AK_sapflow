@@ -19,17 +19,33 @@ site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamil
 site2 <- site2[,1:13]  
 
 
-# updated data:
-site1b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
-                    sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+# updated data 08/21:
+site1b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_21_25/Loranty CR1000_TableTC.dat",
+                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-site1b <- site1[,1:12] 
+site1b <- site1b[,1:12] 
 
-# updated data:
-site2b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000XSeries_TableDT.dat",
+site2b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_21_25/Sapflow_TableDT.dat",
                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
 site2b <- site2b[,1:19] 
+
+
+
+# updated data 11/26:
+site1c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
+                    sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
+site1c <- site1c[,1:12] 
+# sensor 2 tree died. Moved sensor to new tree with 12.5 cm dbh. Refer to pic for pest damage on 8/21
+# sensor 3 had a new sensor swapped in on the same tree and it solved dT anomalies on 8/20
+
+# updated data:
+site2c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000XSeries_TableDT.dat",
+                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
+site2c <- site2c[,1:19] 
+# sensor 5 moved to slot 12, sensor 8 moved to slot 16 on 8/20
 
 
 ## weather 
