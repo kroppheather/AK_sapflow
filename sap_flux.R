@@ -18,6 +18,8 @@ site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamil
 
 site2 <- site2[,1:13]  
 
+site1$dateF <- ymd_hms(site1[,1])
+site2$dateF <- ymd_hms(site2[,1])
 
 # updated data 08/21:
 site1b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_21_25/Loranty CR1000_TableTC.dat",
