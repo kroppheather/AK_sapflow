@@ -2,30 +2,28 @@ library(lubridate)
 library(dplyr)
 library(ggplot2)
 library(reshape2)
+library(tidyr)
+library(sqldf)
 
 # read in data
+# set date for most current data
+endDate <- "11/10/25 15:30"
 sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors_25.csv")
+sensors$endD <- ifelse(sensors$end_date == "current", endDate, sensors$end_date)
+sensors$stDate <- mdy_hm(sensors$start_date)
+sensors$edDate <- mdy_hm(sensors$endD)
 # permafrost spruce
+# updated data 11/26:
+site1c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
+                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_18_2025/Loranty CR1000_TableTC.dat",
-                    sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
-
-site1 <- site1[,1:12] 
-
+site1c <- site1c[,1:12] 
 # deciduous non-permafrost
 site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/07_03_2024/Sapflow_TableDT.dat",
                     sep=",", header=FALSE, skip=4)
 
 site2 <- site2[,1:13]  
 
-site1$dateF <- ymd_hms(site1[,1])
-site2$dateF <- ymd_hms(site2[,1])
-
-# updated data 08/21:
-site1b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_21_25/Loranty CR1000_TableTC.dat",
-                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
-
-site1b <- site1b[,1:12] 
 
 site2b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_21_25/Sapflow_TableDT.dat",
                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
@@ -34,11 +32,7 @@ site2b <- site2b[,1:19]
 
 
 
-# updated data 11/26:
-site1c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
-                    sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-site1c <- site1c[,1:12] 
 # sensor 2 tree died. Moved sensor to new tree with 12.5 cm dbh. Refer to pic for pest damage on 8/21
 # sensor 3 had a new sensor swapped in on the same tree and it solved dT anomalies on 8/20
 
@@ -49,7 +43,7 @@ site2c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hami
 site2c <- site2c[,1:19] 
 # sensor 5 moved to slot 12, sensor 8 moved to slot 16 on 8/20
 
-
+##### organize soil and weather data ----
 ## weather 
 weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/4266886.csv")
 
@@ -185,7 +179,44 @@ sensors$sapwood <- ifelse(sensors$Species == "PIMA", 0.031*sensors$DBH+2.6,
 
 
 
-##### organize dates ----
+##### organize dates and combine data ----
+
+colnames(site1c) <- c("Timestamp", "Obs","doy","hour",paste0("slot",seq(1:8)))
+site1c <- site1c %>%
+  select(!c("Obs","hour", "doy"))
+
+site1_long <- site1c %>%
+  pivot_longer(!Timestamp, names_to="slot",values_to="dT")
+site1_long$slotID = as.numeric(gsub("slot", "", site1_long$slot))
+
+
+site1_long$dateF <- ymd_hms(site1_long$Timestamp)
+site1_long$year <- year(site1_long$dateF)
+site1_long$doy <- yday(site1_long$dateF)
+site1_long$hour <- hour(site1_long$dateF)+(minute(site1_long$dateF)/60)
+site1_long$DD <- site1_long$doy + (site1_long$hour/24)
+
+
+# join in sensor data in a way that accounts for swapping slots/sensor trees
+site1_sensor <- sensors %>%
+  filter(siteID == 1)
+
+
+test <- sqldf("select * from site1_long, site1_sensor
+              LEFT Join site1_long sensors on site1_long.slotID = site1_sensor.slotID AND
+              site1_long.dateF >= site1_sensor.stDate AND site1_long.dateF <= site1_sensor.edDate")
+
+site1_slots <- unique(site1_long$slotID)
+
+for(i in site1_slots){
+  
+}
+
+
+
+
+
+
 
 
 site2$dateF <- ymd_hms(site2[,1])
@@ -195,11 +226,7 @@ site2$hour <- hour(site2$dateF)+(minute(site2$dateF)/60)
 site2$DD <- site2$doy + (site2$hour/24)
 
 
-site1$dateF <- ymd_hms(site1[,1])
-site1$year <- year(site1$dateF)
-site1$doy <- yday(site1$dateF)
-site1$hour <- hour(site1$dateF)+(minute(site1$dateF)/60)
-site1$DD <- site1$doy + (site1$hour/24)
+
 
 dtSite1 <- data.frame(date= rep(site1$date, times = 8), 
                       doy = rep(site1$doy, times = 8),
