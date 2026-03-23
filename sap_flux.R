@@ -2,6 +2,7 @@ library(lubridate)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
+library(reshape2)
 
 
 # read in data
@@ -17,20 +18,21 @@ site1c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hami
                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
 site1c <- site1c[,1:12] 
+site1_all <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
+                        sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
+site1_batt <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
+                         sep=",", skip=1, na.strings=c("NA","NAN"))[,c(1,55:60)]
 # deciduous non-permafrost
 site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/07_03_2024/Sapflow_TableDT.dat",
                     sep=",", header=FALSE, skip=4)
 
-site2 <- site2[,1:13]  
-
-
-site2b <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_21_25/Sapflow_TableDT.dat",
-                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
-
-site2b <- site2b[,1:19] 
+site2 <- site2[,1:18]  
 
 
 
+site2_batt <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000XSeries_TableTC.dat",
+                        sep=",", skip=1)[,c(1,165:170)]
 
 # sensor 2 tree died. Moved sensor to new tree with 12.5 cm dbh. Refer to pic for pest damage on 8/21
 # sensor 3 had a new sensor swapped in on the same tree and it solved dT anomalies on 8/20
@@ -39,8 +41,9 @@ site2b <- site2b[,1:19]
 site2c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000XSeries_TableDT.dat",
                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-site2c <- site2c[,1:19] 
+site2c <- site2c[,1:18] 
 # sensor 5 moved to slot 12, sensor 8 moved to slot 16 on 8/20
+site2_bind <- rbind(site2, site2c)
 
 ##### organize soil and weather data ----
 ## weather 
@@ -215,88 +218,70 @@ dtSite1 <- left_join(site1_long, site1_sensor, by=c("sensDateTime"))
 
 
 
+colnames(site2_bind) <- c("Timestamp", "Obs",paste0("slot",seq(1:16)))
+site2_bind <- site2_bind %>%
+  select(!c("Obs", "slot13","slot14","slot15"))
+
+site2_long <- site2_bind %>%
+  pivot_longer(!Timestamp, names_to="slot",values_to="dT")
+site2_long$slotID = as.numeric(gsub("slot", "", site2_long$slot))
+
+site2_sensor <- sensors %>%
+  filter(siteID == 2)
+
+
+site2_long$sensDateTime <- rep(NA, nrow(site2_long))
+site2_long$dateF <- ymd_hms(site2_long$Timestamp)
+site2_long$year <- year(site2_long$dateF)
+site2_long$doy <- yday(site2_long$dateF)
+site2_long$hour <- hour(site2_long$dateF)+(minute(site2_long$dateF)/60)
+site2_long$DD <- site2_long$doy + (site2_long$hour/24)
+site2_sensor$sensDateTime <- seq(1,nrow(site2_sensor))
 
 
 
-site2$dateF <- ymd_hms(site2[,1])
-site2$year <- year(site2$dateF)
-site2$doy <- yday(site2$dateF)
-site2$hour <- hour(site2$dateF)+(minute(site2$dateF)/60)
-site2$DD <- site2$doy + (site2$hour/24)
+for(i in 1:nrow(site2_sensor)){
+  site2_long$sensDateTime <- ifelse(site2_long$slotID == site2_sensor$slotID[i] &
+                                      site2_long$dateF >= site2_sensor$stDate[i] &
+                                      site2_long$dateF <= site2_sensor$edDate[i], 
+                                    site2_sensor$sensDateTime[i],
+                                    site2_long$sensDateTime)
+  
+}
+dtSite2 <- inner_join(site2_long, site2_sensor, by=c("sensDateTime"))
+
+dtSite2$dT <- as.numeric(dtSite2$dT)
 
 
-
-
-dtSite1 <- data.frame(date= rep(site1$date, times = 8), 
-                      doy = rep(site1$doy, times = 8),
-                      year = rep(site1$year, times=8),
-                      hourD = rep(site1$hour, times = 8),
-                      DD = rep(site1$DD, times = 8),
-                      sensor = rep(seq(1,8), each = nrow(site1)), 
-                      dT = as.numeric(c(site1[,5],
-                                        site1[,6],
-                                        site1[,7],
-                                        site1[,8],
-                                        site1[,9],
-                                        site1[,10],
-                                        site1[,11],
-                                        site1[,12])))
-
-dtSite1$YDD <- dtSite1$year + ((dtSite1$DD-1)/365)
-ggplot(dtSite1, aes(YDD, dT, color=as.factor(sensor)))+
+ggplot(dtSite1, aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()
-ggplot(dtSite1%>% filter(sensor==2&year==2025&doy>160&doy<180), aes(DD, dT, color=as.factor(sensor)))+
+ggplot(dtSite1%>% filter(sensorID==2&year==2025&doy>160&doy<180), aes(DD, dT, color=as.factor(sensorID)))+
   geom_point(size=0.1)+
   geom_line()
-ggplot(dtSite1%>% filter(sensor==5&year==2024), aes(DD, dT, color=as.factor(sensor)))+
-  geom_point()
-  
-dtSite2 <- data.frame(date= rep(site2$date, times = 11), 
-                     doy = rep(site2$doy, times = 11),
-                     year= rep(site2$year, times=11),
-                     hourD = rep(site2$hour, times = 11),
-                     DD = rep(site2$DD, times = 11),
-                     sensor = rep(seq(1,11), each = nrow(site2)), 
-                     dT = as.numeric(c(site2[,3],
-                            site2[,4],
-                            site2[,5],
-                            site2[,6],
-                            site2[,7],
-                            site2[,8],
-                            site2[,9],
-                            site2[,10],
-                            site2[,11],
-                            site2[,12],
-                            site2[,13])))
-dtSite2$YDD <- dtSite2$year + ((dtSite2$DD-1)/365)
+
 tail(unique(dtSite2$dT))
 
-dtSite2 <- dtSite2 %>%
-  filter(doy >= 97)
-
-dtSite1 <- dtSite1 %>%
-  filter(doy >= 97)
-
-ggplot(dtSite2, aes(date, dT, color=as.factor(sensor)))+
-         geom_point()+
-         geom_line()
 
 
-ggplot(dtSite2 %>% filter(sensor ==1), aes(date, dT, color=as.factor(sensor)))+
+
+ggplot(dtSite2 %>% filter(sensorID ==1), aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()+
   geom_line()
 
-test <- dtSite2 %>% filter(sensor ==8)
 
-ggplot(dtSite1, aes(date, dT, color=as.factor(sensor)))+
+ggplot(dtSite1, aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()+
   geom_line()
 
-ggplot(dtSite1 %>% filter(sensor ==4), aes(date, dT, color=as.factor(sensor)))+
-  geom_point()+
+ggplot(dtSite2 %>% filter(sensorID ==4& year==2024), aes(dateF, dT, color=as.factor(sensorID)))+
   geom_line()     
 
+ggplot(dtSite2 %>% filter(sensorID ==1& year==2025), aes(dateF, dT, color=as.factor(sensorID)))+
+  geom_line()    
+ggplot(dtSite1 %>% filter(sensorID ==8& year==2025), aes(dateF, dT, color=as.factor(sensorID)))+
+  geom_line() 
 
+sensor8 <- dtSite2 %>% filter(sensorID ==8)
 ################### calculations ----
 
 
