@@ -1,9 +1,8 @@
 library(lubridate)
 library(dplyr)
 library(ggplot2)
-library(reshape2)
 library(tidyr)
-library(sqldf)
+
 
 # read in data
 # set date for most current data
@@ -200,19 +199,19 @@ site1_long$DD <- site1_long$doy + (site1_long$hour/24)
 # join in sensor data in a way that accounts for swapping slots/sensor trees
 site1_sensor <- sensors %>%
   filter(siteID == 1)
+site1_sensor$sensDateTime <- seq(1,nrow(site1_sensor))
 
+site1_long$sensDateTime <- rep(NA, nrow(site1_long))
 
-test <- sqldf("select * from site1_long, site1_sensor
-              LEFT Join site1_long sensors on site1_long.slotID = site1_sensor.slotID AND
-              site1_long.dateF >= site1_sensor.stDate AND site1_long.dateF <= site1_sensor.edDate")
-
-site1_slots <- unique(site1_long$slotID)
-
-for(i in site1_slots){
+for(i in 1:nrow(site1_sensor)){
+  site1_long$sensDateTime <- ifelse(site1_long$slotID == site1_sensor$slotID[i] &
+                                    site1_long$dateF >= site1_sensor$stDate[i] &
+                                    site1_long$dateF <= site1_sensor$edDate[i], 
+                                    site1_sensor$sensDateTime[i],
+                                    site1_long$sensDateTime)
   
 }
-
-
+dtSite1 <- left_join(site1_long, site1_sensor, by=c("sensDateTime"))
 
 
 
