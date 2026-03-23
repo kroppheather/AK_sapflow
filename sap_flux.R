@@ -4,7 +4,7 @@ library(ggplot2)
 library(reshape2)
 
 # read in data
-sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors.csv")
+sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors_25.csv")
 # permafrost spruce
 
 site1 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/08_18_2025/Loranty CR1000_TableTC.dat",
@@ -51,7 +51,7 @@ site2c <- site2c[,1:19]
 
 
 ## weather 
-weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/4102934.csv")
+weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/4266886.csv")
 
 ## soil
 soil1 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv",
@@ -145,13 +145,14 @@ hourW <- weather %>%
 # daily
 
 dailyW <- weather %>%
-  filter(REPORT_TYPE == "SOD  ") %>%
+  filter(REPORT_TYPE == "SOD") %>%
   select(starts_with("Daily") | starts_with("DATE"))
 
 dailyW$date <-  ymd_hms(dailyW$DATE, tz="Pacific/Gambier")
-dailyW$snowD_cm <- as.numeric(dailyW$DailySnowDepth)*2.54 
-dailyW$sDepth_cm <- ifelse(dailyW$snowD_cm > 60, NA, dailyW$snowD_cm)
-ggplot(dailyW, aes(date,sDepth_cm))+
+dailyW$snowT <- ifelse(dailyW$DailySnowDepth == "T", "1.27",dailyW$DailySnowDepth)
+dailyW$snowD_cm <- as.numeric(dailyW$snowT)/10
+dailyW$sDepth_cm <- dailyW$snowD_cm
+ggplot(dailyW, aes(date,snowD_cm))+
   geom_line()
 dailyW$month <- month(dailyW$date)
 ggplot(dailyW %>% filter(month==4), aes(date,sDepth_cm))+
@@ -168,19 +169,19 @@ hourW$hour <- hour(hourW$date)
 hourW$month <- month(hourW$date) 
 hourW$year <- year(hourW$date)
 # trace gets converted to NA
-hourW$Precip_mm <- as.numeric(hourW$HourlyPrecipitation)*25.4
-hourW$TempC <- (as.numeric(hourW$HourlyDryBulbTemperature)- 32) * (5/9)
+hourW$PrecipT <- ifelse(hourW$HourlyPrecipitation == "T", "0.127",hourW$HourlyPrecipitation)
+hourW$Precip_mm <- as.numeric(hourW$PrecipT)
+hourW$TempC <- as.numeric(hourW$HourlyDryBulbTemperature)
 ggplot(hourW, aes(date,TempC))+
   geom_line()
 
 
 ##### allometry -----
-# Quiñonez-Piñón and Valero found there was no significant relationship
-# between dbh and sapwood between 10-40 cm dbh
-# mean value for North was 3.2 cm
-# assume mean for all trees
-sensors$sapwood <- ifelse(sensors$Species == "PIMA", 3.2,
-                          3) # filler until number can be identified
+# Quiñonez-Piñón and Valero 2017 equations
+
+sensors$sapwood <- ifelse(sensors$Species == "PIMA", 0.031*sensors$DBH+2.6,
+                          ifelse( sensors$Species == "PIGL",0.089*sensors$DBH+0.7,
+                          3)) # filler until number can be identified
 
 
 
