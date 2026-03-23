@@ -214,7 +214,7 @@ for(i in 1:nrow(site1_sensor)){
                                     site1_long$sensDateTime)
   
 }
-dtSite1 <- left_join(site1_long, site1_sensor, by=c("sensDateTime"))
+dtSite1 <- inner_join(site1_long, site1_sensor, by=c("sensDateTime"))
 
 
 
@@ -255,14 +255,6 @@ dtSite2$dT <- as.numeric(dtSite2$dT)
 
 ggplot(dtSite1, aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()
-ggplot(dtSite1%>% filter(sensorID==2&year==2025&doy>160&doy<180), aes(DD, dT, color=as.factor(sensorID)))+
-  geom_point(size=0.1)+
-  geom_line()
-
-tail(unique(dtSite2$dT))
-
-
-
 
 ggplot(dtSite2 %>% filter(sensorID ==1), aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()+
@@ -278,10 +270,11 @@ ggplot(dtSite2 %>% filter(sensorID ==4& year==2024), aes(dateF, dT, color=as.fac
 
 ggplot(dtSite2 %>% filter(sensorID ==1& year==2025), aes(dateF, dT, color=as.factor(sensorID)))+
   geom_line()    
-ggplot(dtSite1 %>% filter(sensorID ==8& year==2025), aes(dateF, dT, color=as.factor(sensorID)))+
+ggplot(dtSite1 %>% filter(sensorID ==1& year==2024), aes(dateF, dT, color=as.factor(sensorID)))+
   geom_line() 
 
-sensor8 <- dtSite2 %>% filter(sensorID ==8)
+
+
 ################### calculations ----
 
 
@@ -289,65 +282,90 @@ sensor8 <- dtSite2 %>% filter(sensorID ==8)
 
 # compare max day
 maxnight1S1 <- dtSite1 %>%
-  group_by(sensor, doy,year) %>%
+  group_by(sensorID, doy,year) %>%
   filter(dT == max(dT),na.rm=TRUE)
 
 
 
 maxnight1S2 <- dtSite2 %>%
-  group_by(sensor, doy,year) %>%
+  group_by(sensorID, doy,year) %>%
   filter(dT == max(dT),na.rm=TRUE)
 
 #remove duplicate maximums that occur for longer than 15 min
 #just take earliest measurement
 maxnightS1 <- maxnight1S1   %>%
-  group_by(sensor, doy,year) %>%
-  filter(hourD == min(hourD),na.rm=TRUE)
+  group_by(sensorID, doy,year) %>%
+  filter(hour == min(hour),na.rm=TRUE)
 
 maxnightS2 <- maxnight1S2   %>%
-  group_by(sensor, doy, year) %>%
-  filter(hourD == min(hourD),na.rm=TRUE)
+  group_by(sensorID, doy, year) %>%
+  filter(hour == min(hour),na.rm=TRUE)
 
-maxJoinS1 <- data.frame(sensor=maxnightS1$sensor,
+maxJoinS1 <- data.frame(sensorID=maxnightS1$sensorID,
                       doy=maxnightS1$doy,
                       year=maxnightS1$year,
                       maxDT = maxnightS1$dT)
 
-maxJoinS2 <- data.frame(sensor=maxnightS2$sensor,
+maxJoinS2 <- data.frame(sensorID=maxnightS2$sensorID,
                         doy=maxnightS2$doy,
                         year=maxnightS2$year,
                         maxDT = maxnightS2$dT)
 
-sapS1 <- left_join(dtSite1, maxJoinS1, by=c("sensor","doy","year"))
-sapS2 <- left_join(dtSite2, maxJoinS2, by=c("sensor","doy","year"))
+sapS1 <- left_join(dtSite1, maxJoinS1, by=c("sensorID","doy","year"))
+sapS2 <- left_join(dtSite2, maxJoinS2, by=c("sensorID","doy","year"))
+
+# convert data to NA for sensors with issues
+sapS1$dTQC <- ifelse(sapS1$sensorID == 1 & sapS1$year == 2024, NA, 
+                  ifelse(sapS1$sensorID == 2 & sapS1$year == 2025 & sapS1$doy < 233, NA,
+                         ifelse(sapS1$sensorID == 3 & sapS1$year == 2025 & sapS1$doy < 233,NA,sapS1$dT)))
+
 
 # m3 H2O m–2 (sapwood) s–1 or m s-1
-sapS1$K <- (sapS1$maxDT - sapS1$dT)/sapS1$dT
+sapS1$K <- (sapS1$maxDT - sapS1$dTQC)/sapS1$dTQC
 sapS1$velo <- 0.000119*(sapS1$K^1.231)
 sapS1$mm_s <- sapS1$velo*1000
 
-sapS2$K <- (sapS2$maxDT - sapS2$dT)/sapS2$dT
+sapS2$dTQC <- ifelse(sapS2$dT <2, NA,
+  sapS2$sensorID == 5 & sapS2$year == 2024, NA, 
+                     ifelse(sapS2$sensorID == 8 & sapS2$year == 2024, NA, 
+                     ifelse(sapS2$sensorID == 5 & sapS2$year == 2025 & sapS2$doy < 233, NA,
+                            ifelse(sapS2$sensorID == 8 & sapS2$year == 2025 & sapS2$doy < 233,NA,sapS2$dT)))))
+
+sapS2$K <- (sapS2$maxDT - sapS2$dTQC)/sapS2$dTQC
 sapS2$velo <- 0.000119*(sapS2$K^1.231)
 sapS2$mm_s <- sapS2$velo*1000
 
-# filter out sensors
+# filter out spikes of abnormal high values
+#not a lot of extreme values. Even 99% will filter out real data. Extreme values in 99.9%
+q_s1 <- quantile(sapS1f$mm_s, probs=seq(0,1,by=0.001),na.rm=TRUE)[1000]
+q_s2 <- quantile(sapS2f$mm_s, probs=seq(0,1,by=0.01),na.rm=TRUE)[95]
+
+sapS2$mm_sf <- ifelse(sapS2$mm_s >q_s2,NA,sapS2$mm_s)
+sapS1$mm_sf <- ifelse(sapS1$mm_s >q_s1,NA,sapS1$mm_s)
+
+hist(sapS1$mm_s)
+hist(sapS2$mm_s)
+ggplot(sapS2 %>% filter(year==2025& sensorID==6), aes(dateF, mm_sf,color=as.factor(sensorID)))+
+  geom_point()+
+  geom_line()
+
 sapS1f <- sapS1 %>%
-  filter(sensor != 1)
+  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,Notes,dT,maxDT,K,velo,mm_s,dTQC)
 
 sapS2f <- sapS2 %>%
-  filter(sensor != 5 & sensor != 8)
+  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,Notes,dT,maxDT,K,velo,mm_s,dTQC)
 
-sapS1f$siteID <- rep(1, nrow(sapS1f))
-sapS2f$siteID <- rep(2, nrow(sapS2f))
 # join in sensor information
-sapAll1 <- rbind(sapS1f, sapS2f)
+sapAll <- rbind(sapS1f, sapS2f)
 
-sapAll <- left_join(sapAll1, sensors, by=c("siteID", "sensor"="sensorID"))
-sapAll$Hours <- floor(sapAll$hourD)
-sapAll$dayDate <- as.Date(sapAll$date)
+sapAll$Hours <- floor(sapAll$hour)
+sapAll$dayDate <- as.Date(sapAll$dateF)
+
+
+
 # get hourly average for easier plotting
 sapHour <- sapAll %>%
-  group_by(Hours, doy, year, dayDate,siteID, sensor, Aspect,  siteName, Genus) %>%
+  group_by(Hours, doy, year, dayDate,siteID, sensorID, Aspect,  siteName, Genus) %>%
   summarise(sap_mm_s= mean(mm_s, na.rm=TRUE))
 
 sapHour$date <- ymd_hm(paste(sapHour$dayDate, sapHour$Hours, ":00"))
@@ -368,70 +386,12 @@ sapHourJune <- sapNorth %>%
   filter(doy >= 153)
 
 ggplot(sapHourApril %>% filter(siteID == 1&year==2024), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
+       aes(x=date, y= mm_h, color=as.factor(sensorID)))+
   geom_point()+
   geom_line()+
   theme_classic()
 ggplot(sapHourApril %>% filter(siteID == 1&year==2025), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHour %>% filter(siteID == 1&year==2025&sensor==8&doy>130&doy<132), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourApril %>% filter(siteID == 2), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourApril %>% filter(siteID == 1&sensor==2), 
-       aes(x=DD, y= mm_h, color=as.factor(year)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourApril %>% filter(siteID == 1&sensor==3), 
-       aes(x=DD, y= mm_h, color=as.factor(year)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-ggplot(sapHourApril %>% filter(siteID == 1&sensor==5), 
-       aes(x=DD, y= mm_h, color=as.factor(year)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-ggplot(sapHourApril %>% filter(siteID == 1&sensor==7), 
-       aes(x=DD, y= mm_h, color=as.factor(year)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourMay %>% filter(siteID == 1), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourMay %>% filter(siteID == 2), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourJune %>% filter(siteID == 1), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-
-ggplot(sapHourJune %>% filter(siteID == 2), 
-       aes(x=date, y= mm_h, color=as.factor(sensor)))+
+       aes(x=date, y= mm_h, color=as.factor(sensorID)))+
   geom_point()+
   geom_line()+
   theme_classic()
