@@ -548,12 +548,347 @@ ggplot(weatherMay %>% filter(year==2025),aes(x=date, y=TempC ))+
 
 
 
+####  June 2024
+
+
+swc1June <- soil1DF %>%
+  filter(doy <= 182 & doy >= 153) %>%
+  filter(type == "Soil moisture")
+
+
+st1June <- soil1DF %>%
+  filter(doy <= 182 & doy >= 153)%>%
+  filter(type == "Temperature")
+
+st2June <- soil2DF %>%
+  filter(doy <= 182 & doy >= 153)%>%
+  filter(type == "Temp" | type == " Temp")
+
+weatherJune <- hourW %>% filter(doy <= 182 & doy >= 153)
+snowJune <- dailyW %>% filter(doy <= 182 & doy >= 153)
+
+ggplot(sapHSite%>%filter(year==2024&doy <= 182 & doy >= 153), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#51827C", "#164E48","#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(st1June,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost: Smith Lake")
+
+
+
+ggplot(st2June,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost free: Bicycle bumps")
+
+ggplot(weatherJune %>% filter(year==2024),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowJune %>% filter(year==2024),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+# June 2025
+
+
+ggplot(sapHSite%>%filter(year==2025&doy <= 182 & doy >= 153), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(weatherJune %>% filter(year==2025),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowJune %>% filter(year==2025),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+
+####  Auguest 2024
+
+
+swc1Aug <- soil1DF %>%
+  filter(doy <= 244 & doy >= 214) %>%
+  filter(type == "Soil moisture")
+
+
+st1Aug <- soil1DF %>%
+  filter(doy <= 244 & doy >= 214)%>%
+  filter(type == "Temperature")
+
+st2Aug <- soil2DF %>%
+  filter(doy <= 244 & doy >= 214)%>%
+  filter(type == "Temp" | type == " Temp")
+
+weatherAug <- hourW %>% filter(doy <= 244 & doy >= 214)
+snowAug <- dailyW %>% filter(doy <= 244 & doy >= 214)
+
+ggplot(sapHSite%>%filter(year==2024&doy <= 244 & doy >= 214), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(st1Aug,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost: Smith Lake")
+
+
+
+ggplot(st2Aug,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost free: Bicycle bumps")
+
+ggplot(weatherAug %>% filter(year==2024),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowAug %>% filter(year==2024),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+# Aug 2025
+
+
+ggplot(sapHSite%>%filter(year==2025&doy <= 244 & doy >= 214), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c(  "#51827C", "#164E48","#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(weatherAug %>% filter(year==2025),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowAug %>% filter(year==2025),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+
+
+####  Sept 2024
+
+
+swc1Sept <- soil1DF %>%
+  filter(doy <= 274 & doy >= 245) %>%
+  filter(type == "Soil moisture")
+
+
+st1Sept <- soil1DF %>%
+  filter(doy <= 274 & doy >= 245)%>%
+  filter(type == "Temperature")
+
+st2Sept <- soil2DF %>%
+  filter(doy <= 274 & doy >= 245)%>%
+  filter(type == "Temp" | type == " Temp")
+
+weatherSept <- hourW %>% filter(doy <= 274 & doy >= 245)
+snowSept <- dailyW %>% filter(doy <= 274 & doy >= 245)
+
+ggplot(sapHSite%>%filter(year==2024&doy <= 274 & doy >= 245), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(st1Sept,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost: Smith Lake")
+
+
+
+ggplot(st2Sept,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost free: Bicycle bumps")
+
+ggplot(weatherSept %>% filter(year==2024),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowSept %>% filter(year==2024),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+# Sep 2025
+
+
+ggplot(sapHSite%>%filter(year==2025&doy <= 274 & doy >= 245), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c(  "#51827C", "#164E48","#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(weatherSept %>% filter(year==2025),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowSept %>% filter(year==2025),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+
+
+####  Oct 2024
+
+
+swc1Oct <- soil1DF %>%
+  filter(doy <= 305 & doy >= 275) %>%
+  filter(type == "Soil moisture")
+
+
+st1Oct <- soil1DF %>%
+  filter(doy <= 305 & doy >= 275)%>%
+  filter(type == "Temperature")
+
+st2Oct <- soil2DF %>%
+  filter(doy <= 305 & doy >= 275)%>%
+  filter(type == "Temp" | type == " Temp")
+
+weatherOct <- hourW %>% filter(doy <= 305 & doy >= 275)
+snowOct <- dailyW %>% filter(doy <= 305 & doy >= 275)
+
+Check <- sapHSite%>%filter(year==2024&doy <= 305 & doy >= 275)
+
+ggplot(sapHSite%>%filter(year==2024&doy <= 305 & doy >= 275), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(st1Oct,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost: Smith Lake")
+
+
+
+ggplot(st2Oct,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost free: Bicycle bumps")
+
+ggplot(weatherOct %>% filter(year==2024),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowOct %>% filter(year==2024),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+# Oct 2025
+
+
+ggplot(sapHSite%>%filter(year==2025&doy <= 305 & doy >= 275), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c(  "#51827C", "#164E48","#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  ylim(0,50)
+
+ggplot(weatherOct %>% filter(year==2025),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowOct %>% filter(year==2025),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
 
 
 
 
+####  November 2024
 
 
+swc1Nov <- soil1DF %>%
+  filter(doy <= 335 & doy >= 306) %>%
+  filter(type == "Soil moisture")
+
+
+st1Nov <- soil1DF %>%
+  filter(doy <= 335 & doy >= 306)%>%
+  filter(type == "Temperature")
+
+st2Nov <- soil2DF %>%
+  filter(doy <= 335 & doy >= 306)%>%
+  filter(type == "Temp" | type == " Temp")
+
+weatherNov <- hourW %>% filter(doy <= 335 & doy >= 306)
+snowNov <- dailyW %>% filter(doy <= 335 & doy >= 306)
+
+Check <- sapHSite%>%filter(year==2024&doy <= 335 & doy >= 306)
+
+ggplot(sapHSite%>%filter(year==2024&doy <= 335 & doy >= 306), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(st1Nov,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost: Smith Lake")
+
+
+
+ggplot(st2Nov,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost free: Bicycle bumps")
+
+ggplot(weatherNov %>% filter(year==2024),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowNov %>% filter(year==2024),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+# Nov 2025
+
+
+ggplot(sapHSite%>%filter(year==2025&doy <= 335 & doy >= 306), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  ylim(0,50)
+
+ggplot(weatherNov %>% filter(year==2025),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowNov %>% filter(year==2025),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
 
 # sapwood relationship: extract depth allometry from Quiñonez-Piñón for PIGL and PIMA
 # sapwood area = pi(sd*DBH-sd^2) calculated from depth
