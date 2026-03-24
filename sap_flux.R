@@ -3,6 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(reshape2)
+library(MetBrewer)
 
 
 # read in data
@@ -363,15 +364,15 @@ for(i in 1:8){
 
 
 
-ggplot(sapS2 %>% filter(year==2025& sensorID==11), aes(dateF, mm_sf,color=as.factor(sensorID)))+
+ggplot(sapS2 %>% filter(year==2025& sensorID==11), aes(dateF, mm_sq,color=as.factor(sensorID)))+
   geom_point()+
   geom_line()
 
 sapS1f <- sapS1 %>%
-  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,Notes,dT,maxDT,K,velo,mm_s,dTQC)
+  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,Notes,dT,maxDT,K,velo,mm_sq,dTQC)
 
 sapS2f <- sapS2 %>%
-  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,Notes,dT,maxDT,K,velo,mm_s,dTQC)
+  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,Notes,dT,maxDT,K,velo,mm_sq,dTQC)
 
 # join in sensor information
 sapAll <- rbind(sapS1f, sapS2f)
@@ -384,7 +385,7 @@ sapAll$dayDate <- as.Date(sapAll$dateF)
 # get hourly average for easier plotting
 sapHour <- sapAll %>%
   group_by(Hours, doy, year, dayDate,siteID, sensorID, Aspect,  siteName, Genus) %>%
-  summarise(sap_mm_s= mean(mm_s, na.rm=TRUE))
+  summarise(sap_mm_s= mean(mm_sq, na.rm=TRUE))
 
 sapHour$date <- ymd_hm(paste(sapHour$dayDate, sapHour$Hours, ":00"))
 sapHour$DD <- sapHour$doy+(sapHour$Hours/24)
@@ -393,26 +394,6 @@ sapHour$mm_h <- sapHour$sap_mm_s*60*60
 # start by just looking at North
 sapNorth <- sapHour %>%
   filter(Aspect == "N")
-
-sapHourApril <- sapNorth %>%
-  filter(doy < 122)
-
-sapHourMay <- sapNorth %>%
-  filter(doy >= 122 & doy < 153)
-
-sapHourJune <- sapNorth %>%
-  filter(doy >= 153)
-
-ggplot(sapHourApril %>% filter(siteID == 1&year==2024), 
-       aes(x=date, y= mm_h, color=as.factor(sensorID)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
-ggplot(sapHourApril %>% filter(siteID == 1&year==2025), 
-       aes(x=date, y= mm_h, color=as.factor(sensorID)))+
-  geom_point()+
-  geom_line()+
-  theme_classic()
 
 # look at averages for site and genus
 sapHSite <- sapNorth %>%
@@ -425,88 +406,154 @@ sapHSite$Name <- paste(sapHSite$siteName, sapHSite$Genus)
 sapHSite$se <- sapHSite$sd_mm_h/sqrt(sapHSite$n_mm_h)
 sapHSite$lowerE <- sapHSite$sap_mm_h - sapHSite$se
 sapHSite$upperE <- sapHSite$sap_mm_h + sapHSite$se
-ggplot(sapHSite, aes(x=date, y=sap_mm_h, color=Name))+
-  geom_line()+
-  geom_point()+ylim(0,100)
 
-ggplot(sapHour%>%filter(doy>=270&doy<=290&siteID == 1&year==2024), aes(x=DD, y=sap_mm_s, color=as.factor(sensorID)))+
-  geom_line()+
-  geom_point()+ylim(0,0.025)
+######## Plotting ----
+dailyW$year <- year(dailyW$date)
+dailyW$doy <- yday(dailyW$date)
+# set up plotting colors
+cols <- c("#67322E", "#51827C", "#164E48")
 
+####  April 2024
 
-ggplot(sapHSite%>%filter(year==2025&doy>245&doy<255), aes(x=date, y=sap_mm_h, color=Name))+
-  geom_point()+ylim(0,100)+geom_line()
-
-ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 100 & doy <= 130&year==2025), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
-  geom_line()+
-  geom_point()+ylim(0,100)
-
-ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 130 & doy <= 160&year==2025), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
-  geom_line()+
-  geom_point()+ylim(0,100)
-
-ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 160 & doy <= 190), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
-  geom_line()+
-  geom_point()+ylim(0,100)
-  
-siteHourApril <- sapHSite %>%
-  filter(doy < 122)
-
-siteHourMay <- sapHSite %>%
-  filter(doy >= 122 & doy < 153)
-
-siteHourJune <- sapHSite %>%
-  filter(doy >= 153 & doy <= 213)
-
-siteHourAug <- sapHSite %>%
-  filter( doy >= 213)
 soil1DF$DD <- soil1DF$doy + (soil1DF$hour/24)
 
 swc1April <- soil1DF %>%
-  filter(doy <= 122 & doy >= 92) %>%
+  filter(doy <= 121 & doy >= 96) %>%
   filter(type == "Soil moisture")
 
 
 st1April <- soil1DF %>%
-  filter(doy <= 122 & doy >= 92)%>%
+  filter(doy <= 121 & doy >= 96)%>%
   filter(type == "Temperature")
 
-ggplot(siteHourApril, aes(x=date, y=sap_mm_h, color=Name))+
-  geom_line()+
-  geom_point()+
-  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5)+
+st2April <- soil2DF %>%
+  filter(doy <= 121 & doy >= 96)%>%
+  filter(type == "Temp" | type == " Temp")
+
+weatherApril <- hourW %>% filter(doy <= 121 & doy >= 96)
+snowApril <- dailyW %>% filter(doy <= 121 & doy >= 96)
+
+ggplot(sapHSite%>%filter(year==2024&doy>=96&doy<=121), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#51827C", "#164E48","#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
   labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
-  theme_classic()+
-  scale_y_continuous( expand=c(0.01,0.01))
-ggplot(st1April,aes(x=DD, y=value, color=depth) )+
-  geom_line()+
-  geom_point()
-ggplot(swc1April,aes(x=DD, y=value, color=depth) )+
-  geom_line()
-  
-ggplot(siteHourMay, aes(x=date, y=sap_mm_h, color=Name))+
-  geom_line()+
-  geom_point()+
-  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5)+
-  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
-  theme_classic()+
+  theme_classic(base_size=18)+
   scale_y_continuous( expand=c(0.01,0.01))
 
-ggplot(siteHourJune, aes(x=date, y=sap_mm_h, color=Name))+
-  geom_line()+
-  geom_point()+
-  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5)+
+ggplot(st1April,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost: Smith Lake")
+
+
+
+ggplot(st2April,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost free: Bicycle bumps")
+
+ggplot(weatherApril %>% filter(year==2024),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowApril %>% filter(year==2024),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+# April 2025
+
+
+ggplot(sapHSite%>%filter(year==2025&doy>=96&doy<=121), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
   labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
-  theme_classic()+
+  theme_classic(base_size=18)+
   scale_y_continuous( expand=c(0.01,0.01))
 
-ggplot(siteHourAug, aes(x=date, y=sap_mm_h, color=Name))+
-  geom_line()+
-  geom_point()+
-  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5)+
+ggplot(weatherApril %>% filter(year==2025),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowApril %>% filter(year==2025),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+
+
+
+####  May 2024
+
+
+
+swc1May <- soil1DF %>%
+  filter(doy <= 152 & doy >= 122) %>%
+  filter(type == "Soil moisture")
+
+
+st1May <- soil1DF %>%
+  filter(doy <= 152 & doy >= 122)%>%
+  filter(type == "Temperature")
+
+st2May <- soil2DF %>%
+  filter(doy <= 152 & doy >= 122)%>%
+  filter(type == "Temp" | type == " Temp")
+
+weatherMay <- hourW %>% filter(doy <= 152 & doy >= 122)
+snowMay <- dailyW %>% filter(doy <= 152 & doy >= 122)
+
+ggplot(sapHSite%>%filter(year==2024&doy <= 152 & doy >= 122), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#51827C", "#164E48","#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
   labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
-  theme_classic()+
+  theme_classic(base_size=18)+
   scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(st1May,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost: Smith Lake")
+
+
+
+ggplot(st2May,aes(x=dateF, y=value, color=as.factor(depth)) )+
+  geom_line(linewidth=1.5)+
+  theme_classic(base_size=18)+scale_color_met_d("Degas")+
+  labs(x= "date", y=expression(paste("Temperature (",degree,"C)")),color="Depth", title="Permafrost free: Bicycle bumps")
+
+ggplot(weatherMay %>% filter(year==2024),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowMay %>% filter(year==2024),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+# May 2025
+
+
+ggplot(sapHSite%>%filter(year==2025&doy <= 152 & doy >= 122), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)+
+  scale_y_continuous( expand=c(0.01,0.01))
+
+ggplot(weatherMay %>% filter(year==2025),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+
+
+
+
+
+
+
+
 
 # sapwood relationship: extract depth allometry from Quiñonez-Piñón for PIGL and PIMA
 # sapwood area = pi(sd*DBH-sd^2) calculated from depth
