@@ -327,7 +327,7 @@ sapS1$mm_s <- sapS1$velo*1000
 
 sapS2$dTQC <- ifelse(sapS2$dT <2, NA,
   ifelse(sapS2$sensorID == 5 & sapS2$year == 2024, NA, 
-                     ifelse(sapS2$sensorID == 8 & sapS2$year == 2024, NA, 
+                     ifelse(sapS2$sensorID == 8 , NA, 
                      ifelse(sapS2$sensorID == 5 & sapS2$year == 2025 & sapS2$doy < 233, NA,
                             ifelse(sapS2$sensorID == 8 & sapS2$year == 2025 & sapS2$doy < 233,NA,sapS2$dT)))))
 
@@ -363,7 +363,7 @@ for(i in 1:8){
 
 
 
-ggplot(sapS2 %>% filter(year==2025& sensorID==8), aes(dateF, mm_sf,color=as.factor(sensorID)))+
+ggplot(sapS2 %>% filter(year==2025& sensorID==11), aes(dateF, mm_sf,color=as.factor(sensorID)))+
   geom_point()+
   geom_line()
 
