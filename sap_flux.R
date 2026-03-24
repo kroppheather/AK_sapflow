@@ -326,7 +326,7 @@ sapS1$velo <- 0.000119*(sapS1$K^1.231)
 sapS1$mm_s <- sapS1$velo*1000
 
 sapS2$dTQC <- ifelse(sapS2$dT <2, NA,
-  sapS2$sensorID == 5 & sapS2$year == 2024, NA, 
+  ifelse(sapS2$sensorID == 5 & sapS2$year == 2024, NA, 
                      ifelse(sapS2$sensorID == 8 & sapS2$year == 2024, NA, 
                      ifelse(sapS2$sensorID == 5 & sapS2$year == 2025 & sapS2$doy < 233, NA,
                             ifelse(sapS2$sensorID == 8 & sapS2$year == 2025 & sapS2$doy < 233,NA,sapS2$dT)))))
@@ -337,15 +337,33 @@ sapS2$mm_s <- sapS2$velo*1000
 
 # filter out spikes of abnormal high values
 #not a lot of extreme values. Even 99% will filter out real data. Extreme values in 99.9%
-q_s1 <- quantile(sapS1f$mm_s, probs=seq(0,1,by=0.001),na.rm=TRUE)[1000]
-q_s2 <- quantile(sapS2f$mm_s, probs=seq(0,1,by=0.01),na.rm=TRUE)[95]
+quant_site1 <- list()
+for(i in 1:8){
+  quant_site1[[i]] <- quantile(sapS1f$mm_s[sapS1f$sensorID == i], probs=seq(0,1,by=0.001),na.rm=TRUE)[1000]
+  
+}
 
-sapS2$mm_sf <- ifelse(sapS2$mm_s >q_s2,NA,sapS2$mm_s)
-sapS1$mm_sf <- ifelse(sapS1$mm_s >q_s1,NA,sapS1$mm_s)
+quant_site2 <- list()
+for(i in 1:11){
+  quant_site2[[i]] <- quantile(sapS2f$mm_s[sapS2f$sensorID == i], probs=seq(0,1,by=0.001),na.rm=TRUE )[1000]
+  
+}
 
-hist(sapS1$mm_s)
-hist(sapS2$mm_s)
-ggplot(sapS2 %>% filter(year==2025& sensorID==6), aes(dateF, mm_sf,color=as.factor(sensorID)))+
+
+sapS2$mm_sq <- rep(NA, nrow(sapS2))
+for(i in 1:11){
+  sapS2$mm_sq <- ifelse(sapS2$sensorID == i & sapS2$mm_s > quant_site2[[i]] | sapS2$mm_s > 0.1,NA,sapS2$mm_s)
+}
+
+sapS1$mm_sq <- rep(NA, nrow(sapS1))
+for(i in 1:8){
+  sapS1$mm_sq <- ifelse(sapS1$sensorID == i & sapS1$mm_s > quant_site2[[i]] | sapS1$mm_s > 0.1,NA,sapS1$mm_s)
+}
+
+
+
+
+ggplot(sapS2 %>% filter(year==2025& sensorID==8), aes(dateF, mm_sf,color=as.factor(sensorID)))+
   geom_point()+
   geom_line()
 
@@ -411,20 +429,19 @@ ggplot(sapHSite, aes(x=date, y=sap_mm_h, color=Name))+
   geom_line()+
   geom_point()+ylim(0,100)
 
-ggplot(sapHour%>%filter(doy>=270&doy<=290&siteID == 1), aes(x=DD, y=sap_mm_s, color=as.factor(sensor)))+
+ggplot(sapHour%>%filter(doy>=270&doy<=290&siteID == 1&year==2024), aes(x=DD, y=sap_mm_s, color=as.factor(sensorID)))+
   geom_line()+
   geom_point()+ylim(0,0.025)
 
 
-ggplot(sapHSite%>%filter(year==2025), aes(x=date, y=sap_mm_h, color=Name))+
+ggplot(sapHSite%>%filter(year==2025&doy>245&doy<255), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()
+
+ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 100 & doy <= 130&year==2025), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
   geom_line()+
   geom_point()+ylim(0,100)
 
-ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 100 & doy <= 130), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
-  geom_line()+
-  geom_point()+ylim(0,100)
-
-ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 130 & doy <= 160), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
+ggplot(sapHSite%>%filter(Name=="Permafrost Picea"& doy >= 130 & doy <= 160&year==2025), aes(x=DD, y=sap_mm_h, color=as.factor(year)))+
   geom_line()+
   geom_point()+ylim(0,100)
 
