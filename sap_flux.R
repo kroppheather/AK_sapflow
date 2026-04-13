@@ -340,13 +340,13 @@ sapS2$mm_s <- sapS2$velo*1000
 #not a lot of extreme values. Even 99% will filter out real data. Extreme values in 99.9%
 quant_site1 <- list()
 for(i in 1:8){
-  quant_site1[[i]] <- quantile(sapS1f$mm_s[sapS1f$sensorID == i], probs=seq(0,1,by=0.001),na.rm=TRUE)[1000]
+  quant_site1[[i]] <- quantile(sapS1$mm_s[sapS1$sensorID == i], probs=seq(0,1,by=0.001),na.rm=TRUE)[1000]
   
 }
 
 quant_site2 <- list()
 for(i in 1:11){
-  quant_site2[[i]] <- quantile(sapS2f$mm_s[sapS2f$sensorID == i], probs=seq(0,1,by=0.001),na.rm=TRUE )[1000]
+  quant_site2[[i]] <- quantile(sapS2$mm_s[sapS2$sensorID == i], probs=seq(0,1,by=0.001),na.rm=TRUE )[1000]
   
 }
 
@@ -411,8 +411,10 @@ sapHSite$upperE <- sapHSite$sap_mm_h + sapHSite$se
 dailyW$year <- year(dailyW$date)
 dailyW$doy <- yday(dailyW$date)
 # set up plotting colors
-cols <- c("#67322E", "#51827C", "#164E48")
-
+#cols <- c("#67322E", "#51827C", "#164E48")
+cols <- c("#C187C7", # permafrost picea
+             "#007C57", # bb picea
+             "#ADDABC") # bb betula 
 ####  April 2024
 
 soil1DF$DD <- soil1DF$doy + (soil1DF$hour/24)
@@ -752,7 +754,9 @@ ggplot(snowSept %>% filter(year==2025),aes(x=date, y=sDepth_cm ))+
 
 
 ####  Oct 2024
-
+cols <- c("#C187C7", # permafrost picea
+          "#007C57", # bb picea
+          "#ADDABC") # bb betula 
 
 swc1Oct <- soil1DF %>%
   filter(doy <= 305 & doy >= 275) %>%
@@ -774,7 +778,7 @@ Check <- sapHSite%>%filter(year==2024&doy <= 305 & doy >= 275)
 
 ggplot(sapHSite%>%filter(year==2024&doy <= 305 & doy >= 275), aes(x=date, y=sap_mm_h, color=Name))+
   geom_point()+ylim(0,100)+geom_line()+
-  scale_color_manual(values=c( "#67322E"))+
+  scale_color_manual(values=c( "#C187C7"))+
   geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
   labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
   theme_classic(base_size=18)+
@@ -801,11 +805,13 @@ ggplot(snowOct %>% filter(year==2024),aes(x=date, y=sDepth_cm ))+
   labs(x= "date",  y="Snow depth (cm)" )
 
 # Oct 2025
+cols <- c("#C187C7", # permafrost picea
+          "#007C57", # bb picea
+          "#ADDABC") # bb betula 
 
-
-ggplot(sapHSite%>%filter(year==2025&doy <= 305 & doy >= 275), aes(x=date, y=sap_mm_h, color=Name))+
+ggplot(sapHSite%>%filter(year==2025&doy <= 305 & doy >= 275& siteID==1 ), aes(x=date, y=sap_mm_h, color=Name))+
   geom_point()+ylim(0,100)+geom_line()+
-  scale_color_manual(values=c(  "#51827C", "#164E48","#67322E"))+
+  scale_color_manual(values=c(  "#C187C7"))+
   geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
   labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
   theme_classic(base_size=18)+
