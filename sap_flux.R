@@ -8,7 +8,7 @@ library(MetBrewer)
 
 # read in data
 # set date for most current data
-endDate <- "11/10/25 15:30"
+endDate <- "05-15-2026 14:30"
 sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors_25.csv")
 sensors$endD <- ifelse(sensors$end_date == "current", endDate, sensors$end_date)
 sensors$stDate <- mdy_hm(sensors$start_date)
@@ -23,6 +23,15 @@ site1_all <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@h
                         sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
 site1_batt <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
+                         sep=",", skip=1, na.strings=c("NA","NAN"))[,c(1,55:60)]
+
+
+site1d <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/05_15_2026/CR1000_sap_sl2_TableTC.dat",
+                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
+site1d <- site1d[,1:12] 
+
+site1_battd <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/05_15_2026/CR1000_sap_sl2_TableTC.dat",
                          sep=",", skip=1, na.strings=c("NA","NAN"))[,c(1,55:60)]
 # deciduous non-permafrost
 site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/07_03_2024/Sapflow_TableDT.dat",
@@ -48,7 +57,7 @@ site2_bind <- rbind(site2, site2c)
 
 ##### organize soil and weather data ----
 ## weather 
-weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/4266886.csv")
+weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/4331627.csv")
 
 ## soil
 soil1 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv",
@@ -183,12 +192,12 @@ sensors$sapwood <- ifelse(sensors$Species == "PIMA", 0.031*sensors$DBH+2.6,
 
 
 ##### organize dates and combine data ----
-
-colnames(site1c) <- c("Timestamp", "Obs","doy","hour",paste0("slot",seq(1:8)))
-site1c <- site1c %>%
+site1_update <- site1d
+colnames(site1_update) <- c("Timestamp", "Obs","doy","hour",paste0("slot",seq(1:8)))
+site1_update <- site1_update %>%
   select(!c("Obs","hour", "doy"))
 
-site1_long <- site1c %>%
+site1_long <- site1_update %>%
   pivot_longer(!Timestamp, names_to="slot",values_to="dT")
 site1_long$slotID = as.numeric(gsub("slot", "", site1_long$slot))
 
@@ -902,4 +911,46 @@ ggplot(snowNov %>% filter(year==2025),aes(x=date, y=sDepth_cm ))+
 # sapwood area allometry Perron 2023 for PIMA
 # Quiñonez-Piñón has relationships between leaf area and sapwood area
 # Power 2014 for projected leaf area for PIMA and PIGL
+
+
+# April 2026
+
+weatherApr <- hourW %>% filter(doy <= 120 & doy >= 91& year==2026)
+snowApr <- dailyW %>% filter(doy <= 120 & doy >= 91& year==2026)
+
+ggplot(sapHSite%>%filter(year==2026&doy <= 120 & doy >= 91), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)
+
+ggplot(weatherApr %>% filter(year==2026),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowApr %>% filter(year==2026),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
+
+
+# May 2026
+
+weatherMay <- hourW %>% filter(doy <= 151 & doy >= 121& year==2026)
+snowMay <- dailyW %>% filter(doy <= 151 & doy >= 121& year==2026)
+
+ggplot(sapHSite%>%filter(year==2026&doy <= 151 & doy >= 121), aes(x=date, y=sap_mm_h, color=Name))+
+  geom_point()+ylim(0,100)+geom_line()+
+  scale_color_manual(values=c( "#67322E"))+
+  geom_errorbar(aes(ymin =lowerE , ymax = upperE, color=Name), alpha=0.5,width=0)+
+  labs(x= "date", y=expression(paste("sapflow (mm hr"^-1,")")))+
+  theme_classic(base_size=18)
+
+ggplot(weatherMay %>% filter(year==2026),aes(x=date, y=TempC ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y=expression(paste("Air temperature (",degree,"C)")))
+
+ggplot(snowMay %>% filter(year==2026),aes(x=date, y=sDepth_cm ))+
+  geom_line(linewidth=0.75)+theme_classic(base_size=18)+
+  labs(x= "date",  y="Snow depth (cm)" )
 
