@@ -54,6 +54,7 @@ site2c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hami
 site2c <- site2c[,1:18] 
 
 site2d <-  read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/06_18_2026/CR1000XSeries_TableDT.dat",
+                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 # sensor 5 moved to slot 12, sensor 8 moved to slot 16 on 8/20
 site2_bind <- rbind(site2, site2c)
 
