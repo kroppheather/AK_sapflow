@@ -8,7 +8,7 @@ library(MetBrewer)
 
 # read in data
 # set date for most current data
-endDate <- "05-15-2026 14:30"
+endDate <- "06-15-2026 14:30"
 sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors_25.csv")
 sensors$endD <- ifelse(sensors$end_date == "current", endDate, sensors$end_date)
 sensors$stDate <- mdy_hm(sensors$start_date)
@@ -52,6 +52,8 @@ site2c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hami
                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
 site2c <- site2c[,1:18] 
+
+site2d <-  read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/06_18_2026/CR1000XSeries_TableDT.dat",
 # sensor 5 moved to slot 12, sensor 8 moved to slot 16 on 8/20
 site2_bind <- rbind(site2, site2c)
 
