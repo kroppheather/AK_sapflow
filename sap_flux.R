@@ -59,8 +59,21 @@ site2d <-  read.table(paste0(dirData[pathI],"/06_18_2026/CR1000XSeries_TableDT.d
                       sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
 site2d <- site2d[8846:10205,1:18] 
+
+
+site2e <-  read.table(paste0(dirData[pathI],"/07_27_2026/bb/sapflow_bb_TableDT.dat"),
+                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
+site2e <- site2d[1361:5761,1:18] 
+
+
+
 # sensor 5 moved to slot 12, sensor 8 moved to slot 16 on 8/20
-site2_bind <- rbind(site2, site2c,site2d)
+site2_bind <- rbind(site2, site2c,site2d,site2e)
+
+
+
+
 
 ##### organize soil and weather data ----
 ## weather 
