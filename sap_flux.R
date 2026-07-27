@@ -3,71 +3,75 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 library(reshape2)
-library(MetBrewer)
 
-
+dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/", # mac
+             "C:/Users/kropp/Documents/AK_sapflow")
+pathI <- 2
 # read in data
 # set date for most current data
 endDate <- "06-15-2026 14:30"
-sensors <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/sensors_25.csv")
+sensors <- read.csv(paste0(dirData[pathI],"/sensors_25.csv"))
 sensors$endD <- ifelse(sensors$end_date == "current", endDate, sensors$end_date)
 sensors$stDate <- mdy_hm(sensors$start_date)
 sensors$edDate <- mdy_hm(sensors$endD)
 # permafrost spruce
 # updated data 11/26:
-site1c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
+site1c <- read.table(paste0(dirData[pathI],"/11_26_2025/CR1000_sap_sl2_TableTC.dat"),
                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
 site1c <- site1c[,1:12] 
-site1_all <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
+site1_all <- read.table(paste0(dirData[pathI],"/11_26_2025/CR1000_sap_sl2_TableTC.dat"),
                         sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-site1_batt <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000_sap_sl2_TableTC.dat",
+site1_batt <- read.table(paste0(dirData[pathI],"/11_26_2025/CR1000_sap_sl2_TableTC.dat"),
                          sep=",", skip=1, na.strings=c("NA","NAN"))[,c(1,55:60)]
 
+#site1d has all recent data since 4/24
 
-site1d <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/05_15_2026/CR1000_sap_sl2_TableTC.dat",
+site1d <- read.table(paste0(dirData[pathI],"/05_15_2026/CR1000_sap_sl2_TableTC.dat"),
                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
 site1d <- site1d[,1:12] 
 
-site1_battd <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/05_15_2026/CR1000_sap_sl2_TableTC.dat",
+site1_battd <- read.table(paste0(dirData[pathI],"/05_15_2026/CR1000_sap_sl2_TableTC.dat"),
                          sep=",", skip=1, na.strings=c("NA","NAN"))[,c(1,55:60)]
 # deciduous non-permafrost
-site2 <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/07_03_2024/Sapflow_TableDT.dat",
+site2 <- read.table(paste0(dirData[pathI],"/07_03_2024/Sapflow_TableDT.dat"),
                     sep=",", header=FALSE, skip=4)
 
 site2 <- site2[,1:18]  
 
 
 
-site2_batt <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000XSeries_TableTC.dat",
+site2_batt <- read.table(paste0(dirData[pathI],"/11_26_2025/CR1000XSeries_TableTC.dat"),
                         sep=",", skip=1)[,c(1,165:170)]
 
 # sensor 2 tree died. Moved sensor to new tree with 12.5 cm dbh. Refer to pic for pest damage on 8/21
 # sensor 3 had a new sensor swapped in on the same tree and it solved dT anomalies on 8/20
 
 # updated data:
-site2c <- read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/11_26_2025/CR1000XSeries_TableDT.dat",
+site2c <- read.table(paste0(dirData[pathI],"/11_26_2025/CR1000XSeries_TableDT.dat"),
                      sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
 site2c <- site2c[,1:18] 
 
-site2d <-  read.table("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/06_18_2026/CR1000XSeries_TableDT.dat",
+site2d <-  read.table(paste0(dirData[pathI],"/06_18_2026/CR1000XSeries_TableDT.dat"),
                       sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
+site2d <- site2d[8846:10205,1:18] 
 # sensor 5 moved to slot 12, sensor 8 moved to slot 16 on 8/20
-site2_bind <- rbind(site2, site2c)
+site2_bind <- rbind(site2, site2c,site2d)
 
 ##### organize soil and weather data ----
 ## weather 
-weather <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/4331627.csv")
+weather <- read.csv(paste0(dirData[pathI],"/weather/4331627.csv"))
 
 ## soil
-soil1 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv",
+soil1 <- read.csv(paste0(dirData[pathI],"/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv"),
                header=FALSE, skip=6  )
-soil1D <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv",
+soil1D <- read.csv(paste0(dirData[pathI],"/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv"),
                    header=FALSE, skip=5, nrows=1)
-soil1T <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv",
+soil1T <- read.csv(paste0(dirData[pathI],"/weather/Oct_2024/smith_lake_2_jan1_sept_2024.csv"),
                    header=FALSE, skip=4, nrows=1)
 names1 <- c("timestamp", "air.temp_2", 
             paste0(soil1T[3:13],"_", soil1D[3:13]))
@@ -103,11 +107,11 @@ day_swc1 <- swc1 %>%
 
 
 
-soil2 <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/Bicycle_bumps_2024-01-01_2024-10-01.csv",
+soil2 <- read.csv(paste0(dirData[pathI],"/weather/Oct_2024/Bicycle_bumps_2024-01-01_2024-10-01.csv"),
                   header=FALSE, skip=4  )
-soil2D <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/Bicycle_bumps_2024-01-01_2024-10-01.csv",
+soil2D <- read.csv(paste0(dirData[pathI],"/weather/Oct_2024/Bicycle_bumps_2024-01-01_2024-10-01.csv"),
                    header=FALSE, skip=3, nrows=1)
-soil2T <- read.csv("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/weather/Oct_2024/Bicycle_bumps_2024-01-01_2024-10-01.csv",
+soil2T <- read.csv(paste0(dirData[pathI],"/weather/Oct_2024/Bicycle_bumps_2024-01-01_2024-10-01.csv"),
                    header=FALSE, skip=2, nrows=1)
 
 names2 <- c("timestamp", "air.temp_2", 
@@ -269,10 +273,18 @@ dtSite2$dT <- as.numeric(dtSite2$dT)
 ggplot(dtSite1, aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()
 
-ggplot(dtSite2 %>% filter(sensorID ==1), aes(dateF, dT, color=as.factor(sensorID)))+
+ggplot(dtSite2, aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()+
   geom_line()
 
+ggplot(dtSite2 %>% filter(year == 2026), aes(dateF, dT, color=as.factor(sensorID)))+
+  geom_point()+
+  geom_line()
+checkS4 <- dtSite2 %>% filter(year == 2026 & sensorID == 4)
+
+ggplot(dtSite1 %>% filter(year == 2026) , aes(dateF, dT, color=as.factor(sensorID)))+
+  geom_point()+
+  geom_line()
 
 ggplot(dtSite1, aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()+
