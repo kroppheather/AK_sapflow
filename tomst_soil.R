@@ -38,6 +38,7 @@ tomstAll <- do.call("rbind",datT)
 # filter out before installation
 soilDF <- left_join(tomstAll, sensorI, by="SN")%>%
   filter(dateF >= ymd("2025-08-20"))
+soilDF$month <- month(soilDF$akD)
 
 ggplot(soilDF, aes(akD, Tm6, color=sitesensor) )+
   geom_line()
@@ -50,6 +51,14 @@ soilDF$SMcor <- ifelse(soilDF$site == "permafrost-free",
                       (1.23E-7*(soilDF$SM^2)) - (1.45E-4*soilDF$SM) +0.203)
 
 ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, Tm6, color=sensorID) )+
+  geom_line()
+
+
+ggplot(soilDF %>%filter(site == "permafrost"&month==4), aes(akD, Tm6, color=sensorID) )+
+  geom_line()
+
+
+ggplot(soilDF %>%filter(site == "permafrost"&month==5), aes(akD, Tm6, color=sensorID) )+
   geom_line()
 
 ggplot(soilDF %>%filter(site == "permafrost-free"), aes(akD, Tm6, color=sensorID) )+
