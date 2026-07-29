@@ -122,6 +122,12 @@ ggplot(dailyW, aes(date,snowD_cm))+
 dailyW$month <- month(dailyW$date)
 ggplot(dailyW %>% filter(month==4), aes(date,sDepth_cm))+
   geom_line()
+dailyW$precip <- ifelse(dailyW$DailyPrecipitation == "T",0,as.numeric(dailyW$DailyPrecipitation))
+pastPr <- numeric()
+for(i in 7:nrow(dailyW)){
+  pastPr[i] <- sum(dailyW$precip[i:(i-6)])
+}
+dailyW$pastPrecip <- pastPr
 
 AprilD <- dailyW %>% filter(month==4)
 # Gambier islands are always in UTC -9 with no daylight savigns
@@ -153,13 +159,47 @@ summary(bene_sap)
 bene_bark <- lm(bene$bark.depth.cm ~ bene$DBH.cm)
 summary(bene_bark)
 
+
+
+
+
 # Quiñonez-Piñón and Valero 2017 equations
 
 sensors$sapwood <- ifelse(sensors$Species == "PIMA", 0.031*sensors$DBH+2.6,
                           ifelse( sensors$Species == "PIGL",0.089*sensors$DBH+0.7,
-                                  0.366*sensors$DBH-0.68)) 
+                                  0.366*sensors$DBH-0.68))
+
+sensors$bark <- ifelse(sensors$Species == "PIMA",NA,
+                          ifelse( sensors$Species == "PIGL",NA,
+                                  0.027*sensors$DBH-0.0018))
+
+sensors$hartwood <- ifelse(sensors$Species == "PIMA",NA,
+                       ifelse( sensors$Species == "PIGL",NA,
+                               sensors$DBH-(sensors$bark*2)-(sensors$sapwood*2)))
+
+# sapwood area equations from Pappas et al 2022
+#area is in cm2 and cm dbh
+sensors$sapwood_area <- ifelse(sensors$Species == "PIMA", 0.53*(sensors$DBH^1.78),
+                               ifelse( sensors$Species == "PIGL",1.73*(sensors$DBH^1.49),
+                                       (pi*(((sensors$sapwood/2)+(sensors$hartwood/2))^2))-(pi*((sensors$hartwood/2)^2)))) 
+
+sensors$sap_area_m2 <- sensors$sapwood_area*0.0001
 
 
+# height estimation from Yarie et al
+
+sensors$height_m <-ifelse(sensors$Species == "PIMA", 0.441+0.703*sensors$DBH,
+                        ifelse( sensors$Species == "PIGL",1.47+0.848*sensors$DBH-0.005*(sensors$DBH^2),
+                                5.619+0.899*sensors$DBH-0.014*(sensors$DBH^2)))
+#LA in m2 Power et al 2014 for PI sp. Yarie et al gives foliage weight in g
+# 
+#Melvin et al birch specific leaf area 0.0158 m2 per g 
+sensors$LA_m2 <-ifelse(sensors$Species == "PIMA", 1.541*(sensors$DBH^3.782)*(sensors$height_m^-2.73),
+                          ifelse( sensors$Species == "PIGL",0.1595*(sensors$DBH^3.131)*(sensors$height_m^-1.625),
+                                 ( 145.892*sensors$DBH)*0.158))
+
+# leaf area PIMA and PIGL from 
+#B1*DBH^B2*H^B3
 
 ##### sap flow organize dates and combine data ----
 site1_update <- site1e
@@ -228,6 +268,8 @@ for(i in 1:nrow(site2_sensor)){
                                     site2_long$sensDateTime)
   
 }
+
+
 dtSite2 <- inner_join(site2_long, site2_sensor, by=c("sensDateTime"))
 
 dtSite2$dT <- as.numeric(dtSite2$dT)
@@ -364,10 +406,10 @@ for(i in 1:8){
 
 
 sapS1f <- sapS1 %>%
-  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,Notes,dT,maxDT,K,velo,mm_sq,dTQC)
+  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,sapwood_area,LA_m2,Notes,dT,maxDT,K,velo,mm_sq,dTQC)
 
 sapS2f <- sapS2 %>%
-  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,Notes,dT,maxDT,K,velo,mm_sq,dTQC)
+  select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,sapwood_area,LA_m2,Notes,dT,maxDT,K,velo,mm_sq,dTQC)
 
 # sensor 8 issues, remove
 sapS2f <- sapS2f %>%
@@ -382,7 +424,7 @@ sapAll$dayDate <- as.Date(sapAll$dateF)
 
 # get hourly average for easier plotting
 sapHour <- sapAll %>%
-  group_by(Hours, doy, year, dayDate,siteID, sensorID, Aspect,  siteName, Genus) %>%
+  group_by(Hours, doy, year, dayDate,siteID, sensorID, Aspect,  siteName, Genus, sapwood_area, LA_m2) %>%
   summarise(sap_mm_s= mean(mm_sq, na.rm=TRUE))
 
 sapHour$date <- ymd_hm(paste(sapHour$dayDate, sapHour$Hours, ":00"))
@@ -392,6 +434,8 @@ sapHour$mm_h <- sapHour$sap_mm_s*60*60
 # start by just looking at North
 sapNorth <- sapHour %>%
   filter(Aspect == "N")
+
+
 
 
 ggplot(sapNorth %>% filter(siteID == 1), aes(date, mm_h, color=as.factor(sensorID)))+
@@ -428,6 +472,143 @@ ggplot(sapHSite %>% filter(month== 6 & siteID == 2 & Genus == "Picea"), aes(DD,s
 ggplot(sapHSite %>% filter(month== 6 & siteID == 2 & Genus == "Betula"), aes(DD,sap_mm_h,color=as.factor(year)))+
   geom_line()+
   geom_point()
+
+
+# total daily sap flow
+
+# sapflow in mm per hour
+
+# convert back to m per hour
+# m3 H2O m–2 (sapwood) s–1 or m s-1
+sapNorth$m_s <- ((sapNorth$mm_h / 1000)/60)/60
+sapNorth$sapwood_area_m <- sapNorth$sapwood_area*0.0001
+# Ewers equation looks for Js (velo) in Kg m-2 s-1
+# 1 m3 is 1000 kg
+sapNorth$Js <-  sapNorth$m_s * 1000
+
+#Calculate El
+# El = Js * Sa/Sl
+# Kg m-2 leaf s-1 (also = L m-2 leaf s-1)
+
+
+sapNorth$El <- sapNorth$Js *(sapNorth$sapwood_area_m/sapNorth$LA_m2)
+sapNorth$El_hr <- sapNorth$El*60*60
+
+ggplot(sapNorth %>% filter(siteID ==1& year== 2024&sensorID==2), aes(date,El_hr,color=as.factor(sensorID)))+
+  geom_line()+
+  geom_point()
+
+sapNorth$E_tree_hr <- sapNorth$Js *sapNorth$sapwood_area_m*60*60
+
+# sum up for entire day
+El_day <- sapNorth %>%
+  filter(is.na(El_hr)==FALSE) %>%
+  group_by( doy, year, siteID, siteName, Genus, sensorID) %>%
+  summarize(El_day = sum(El_hr),
+            E_tree = sum(E_tree_hr),
+            n_day=n())%>%
+  filter(n_day == 24)
+
+El_site <- El_day %>%
+  group_by(doy, year, siteID, siteName, Genus) %>%
+  summarize(El_site = mean(El_day),
+            El_tree_site=mean(E_tree),
+            n_tree = n()) %>%
+  filter(n_tree >= 3)%>% filter(doy>135&doy<258) # filter out early/late sap flow that may not be transpiration
+
+El_site$date <- as.Date(El_site$doy-1, origin = paste0(El_site$year,"-01-01"))
+
+El_site$ml_m2_day <- El_site$El_site*1000
+El_site$month <- month(El_site$date)
+
+El_site <- left_join(El_site,dailyW, by="date")
+
+ggplot(El_site %>%filter(siteID==1), aes(DailyAverageDryBulbTemperature, ml_m2_day))+
+  geom_point()
+
+ggplot(El_site %>%filter(siteID==2&Genus=="Betula"), aes(DailyAverageDryBulbTemperature, ml_m2_day))+
+  geom_point()
+
+ggplot(El_site %>%filter(siteID==2&Genus=="Picea"), aes(DailyAverageDryBulbTemperature, ml_m2_day))+
+  geom_point()
+
+ggplot(El_site %>%filter(siteID==1), aes(pastPrecip, ml_m2_day))+
+  geom_point()
+
+ggplot(El_site %>%filter(siteID==2&Genus=="Betula"), aes(pastPrecip, ml_m2_day))+
+  geom_point()
+
+ggplot(El_site %>%filter(siteID==2&Genus=="Picea"), aes(pastPrecip, ml_m2_day))+
+  geom_point()
+
+ggplot(El_site, aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+ggplot(El_site, aes(date,El_tree_site, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2024), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2025), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2026), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+
+ggplot(El_site %>%filter(year==2024&siteID==1), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2025&siteID==1), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2026&siteID==1), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+
+
+ggplot(El_site %>%filter(year==2024&siteID==2&Genus=="Betula"), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2025&siteID==2&Genus=="Betula"), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2026&siteID==2&Genus=="Betula"), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+
+
+ggplot(El_site %>%filter(year==2024&siteID==2&Genus=="Picea"), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2025&siteID==2&Genus=="Picea"), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2026&siteID==2&Genus=="Picea"), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2024), aes(date,El_tree_site, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2025), aes(date,El_tree_site, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(year==2026), aes(date,El_tree_site, color=paste(siteName,Genus)))+
+  geom_point()
+
+ggplot(El_site %>%filter(month==6 & siteID==1), aes(doy,ml_m2_day, color=as.factor(year)))+
+  geom_point()+
+  geom_line()
+
+
+ggplot(El_site %>%filter(month==6 & siteID==2&Genus=="Betula"), aes(doy,ml_m2_day, color=as.factor(year)))+
+  geom_point()+
+  geom_line()
+
+ggplot(El_site %>%filter(month==6 & siteID==2&Genus=="Picea"), aes(doy,ml_m2_day, color=as.factor(year)))+
+  geom_point()+
+  geom_line()
+
 #### organize soil data ----
 sensorI$SN <- as.character(sensorI$SN)
 
@@ -523,4 +704,32 @@ ggplot(soilApril %>% filter(site == "permafrost"), aes(akD, Tm6, color=sitesenso
 
 
 
+#####################
+# examine both soil and El for overlapping data
+soilDF$date <- as.Date(soilDF$akD)
+soilDF$siteID <- ifelse(soilDF$site == "permafrost",1,2)
 
+dailySoil <- soilDF %>%
+  group_by(date, siteID) %>%
+  summarise(Tsoil = mean(Tm6),
+            SMsoil = mean(SMcor))
+
+siteAll <- left_join(El_site, dailySoil, by=c("siteID","date"))
+
+ggplot(siteAll %>% filter(siteID == 1), aes(Tsoil,El_tree_site))+
+  geom_point()
+
+ggplot(siteAll %>% filter(siteID == 2 & Genus == "Picea"), aes(Tsoil,El_tree_site))+
+  geom_point()
+
+ggplot(siteAll %>% filter(siteID == 2 & Genus == "Betula"), aes(Tsoil,El_tree_site))+
+  geom_point()
+
+ggplot(siteAll %>% filter(siteID == 2 & Genus == "Betula"), aes(SMsoil,El_tree_site))+
+  geom_point()
+
+ggplot(siteAll %>% filter(siteID == 2 & Genus == "Picea"), aes(SMsoil,El_tree_site))+
+  geom_point()
+
+ggplot(siteAll %>% filter(siteID == 1 ), aes(SMsoil,El_tree_site))+
+  geom_point()
