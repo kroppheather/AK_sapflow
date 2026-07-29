@@ -13,9 +13,12 @@ dirT <- paste0(dirData[pathI],"/tomst/07_27_26")
 
 sensorI <- read.csv(paste0(dirData[pathI], "/tomst/sensor_sn.csv"))
 
+#BENE sapwood allometry
+bene <- read.csv(paste0(dirData[pathI], "/BENE allometry.csv"))
+
 # read in data
 # set date for most current data
-endDate <- "06-15-2026 14:30"
+endDate <- "07-27-2026 09:00"
 sensors <- read.csv(paste0(dirData[pathI],"/sensors_25.csv"))
 sensors$endD <- ifelse(sensors$end_date == "current", endDate, sensors$end_date)
 sensors$stDate <- mdy_hm(sensors$start_date)
@@ -41,6 +44,9 @@ site1d <- site1d[,1:12]
 
 site1_battd <- read.table(paste0(dirData[pathI],"/05_15_2026/CR1000_sap_sl2_TableTC.dat"),
                           sep=",", skip=1, na.strings=c("NA","NAN"))[,c(1,55:60)]
+
+site1e <- read.table(paste0(dirData[pathI],"/07_27_2026/CR1000_sap_sl2_TableTC.dat"),
+                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))[,1:12] 
 # deciduous non-permafrost
 site2 <- read.table(paste0(dirData[pathI],"/07_03_2024/Sapflow_TableDT.dat"),
                     sep=",", header=FALSE, skip=4)
@@ -50,8 +56,11 @@ site2 <- site2[,1:18]
 
 
 site2_batt <- read.table(paste0(dirData[pathI],"/11_26_2025/CR1000XSeries_TableTC.dat"),
-                         sep=",", skip=1)[,c(1,165:170)]
+                         sep=",", skip=4)[,c(1,165:170)]
+site2_batt$date <- ymd_hms(site2_batt$V1)
 
+ggplot(site2_batt, aes(date,V169))+
+  geom_line()
 # sensor 2 tree died. Moved sensor to new tree with 12.5 cm dbh. Refer to pic for pest damage on 8/21
 # sensor 3 had a new sensor swapped in on the same tree and it solved dT anomalies on 8/20
 
@@ -70,9 +79,15 @@ site2d <- site2d[8846:10205,1:18]
 site2e <-  read.table(paste0(dirData[pathI],"/07_27_2026/bb/sapflow_bb_TableDT.dat"),
                       sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-site2e <- site2d[1361:5761,1:18] 
+site2e <- site2e[1361:5761,1:18] 
 
+site2e_batt <- read.table(paste0(dirData[pathI],"/07_27_2026/bb/sapflow_bb_TableTC.dat"),
+                         sep=",", skip=4)[,c(1,165:169)]
 
+site2e_batt$date <- ymd_hms(site2e_batt$V1)
+
+ggplot(site2e_batt, aes(date,V169))+
+  geom_line()
 
 # sensor 5 moved to slot 12, sensor 8 moved to slot 16 on 8/20
 site2_bind <- rbind(site2, site2c,site2d,site2e)
@@ -83,7 +98,7 @@ site2_bind <- rbind(site2, site2c,site2d,site2e)
 
 ##### organize weather data ----
 ## weather 
-weather <- read.csv(paste0(dirData[pathI],"/weather/4331627.csv"))
+weather <- read.csv(paste0(dirData[pathI],"/weather/4363851.csv"))
 
 
 #RH and Precip
@@ -127,16 +142,27 @@ ggplot(hourW, aes(date,TempC))+
 
 
 ##### sap allometry -----
+# BENE allometry 
+
+plot(bene$DBH.cm, bene$Sapwood.depth.cm)
+plot(bene$DBH.cm, bene$bark.depth.cm)
+
+bene_sap <- lm(bene$Sapwood.depth.cm ~ bene$DBH.cm)
+summary(bene_sap)
+
+bene_bark <- lm(bene$bark.depth.cm ~ bene$DBH.cm)
+summary(bene_bark)
+
 # Quiñonez-Piñón and Valero 2017 equations
 
 sensors$sapwood <- ifelse(sensors$Species == "PIMA", 0.031*sensors$DBH+2.6,
                           ifelse( sensors$Species == "PIGL",0.089*sensors$DBH+0.7,
-                                  3)) # filler until number can be identified
+                                  0.366*sensors$DBH-0.68)) 
 
 
 
 ##### sap flow organize dates and combine data ----
-site1_update <- site1d
+site1_update <- site1e
 colnames(site1_update) <- c("Timestamp", "Obs","doy","hour",paste0("slot",seq(1:8)))
 site1_update <- site1_update %>%
   select(!c("Obs","hour", "doy"))
@@ -217,9 +243,21 @@ ggplot(dtSite2, aes(dateF, dT, color=as.factor(sensorID)))+
 ggplot(dtSite2 %>% filter(year == 2026), aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()+
   geom_line()
+
+ggplot(dtSite2 %>% filter(year == 2025& sensorID !=8), aes(dateF, dT, color=as.factor(sensorID)))+
+  geom_point()+
+  geom_line()
+ggplot(dtSite1 %>% filter(year == 2025), aes(dateF, dT, color=as.factor(sensorID)))+
+  geom_point()+
+  geom_line()
+
 checkS4 <- dtSite2 %>% filter(year == 2026 & sensorID == 4)
 
 ggplot(dtSite1 %>% filter(year == 2026) , aes(dateF, dT, color=as.factor(sensorID)))+
+  geom_point()+
+  geom_line()
+
+ggplot(dtSite2 %>% filter(sensorID == 8) , aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()+
   geom_line()
 
@@ -331,6 +369,9 @@ sapS1f <- sapS1 %>%
 sapS2f <- sapS2 %>%
   select(Timestamp,dateF,year,doy,hour,DD,slot,siteID,siteName,sensorID, TreeID,Aspect,DBH,Species,Genus,sapwood,Notes,dT,maxDT,K,velo,mm_sq,dTQC)
 
+# sensor 8 issues, remove
+sapS2f <- sapS2f %>%
+  filter(sensorID != 8)
 # join in sensor information
 sapAll <- rbind(sapS1f, sapS2f)
 
@@ -352,6 +393,16 @@ sapHour$mm_h <- sapHour$sap_mm_s*60*60
 sapNorth <- sapHour %>%
   filter(Aspect == "N")
 
+
+ggplot(sapNorth %>% filter(siteID == 1), aes(date, mm_h, color=as.factor(sensorID)))+
+  geom_line()+
+  geom_point()
+
+
+ggplot(sapNorth %>% filter(siteID == 2), aes(date, mm_h, color=as.factor(sensorID)))+
+  geom_line()+
+  geom_point()
+
 # look at averages for site and genus
 sapHSite <- sapNorth %>%
   na.omit() %>%
@@ -364,7 +415,19 @@ sapHSite$se <- sapHSite$sd_mm_h/sqrt(sapHSite$n_mm_h)
 sapHSite$lowerE <- sapHSite$sap_mm_h - sapHSite$se
 sapHSite$upperE <- sapHSite$sap_mm_h + sapHSite$se
 
+sapHSite$month <- month(sapHSite$date)
 
+ggplot(sapHSite %>% filter(month== 6 & siteID == 1), aes(DD,sap_mm_h,color=as.factor(year)))+
+  geom_line()+
+  geom_point()
+
+ggplot(sapHSite %>% filter(month== 6 & siteID == 2 & Genus == "Picea"), aes(DD,sap_mm_h,color=as.factor(year)))+
+  geom_line()+
+  geom_point()
+
+ggplot(sapHSite %>% filter(month== 6 & siteID == 2 & Genus == "Betula"), aes(DD,sap_mm_h,color=as.factor(year)))+
+  geom_line()+
+  geom_point()
 #### organize soil data ----
 sensorI$SN <- as.character(sensorI$SN)
 
@@ -404,9 +467,12 @@ soilDF$SMcor <- ifelse(soilDF$site == "permafrost-free",
                       (1.70E-8*(soilDF$SM^2)) + (1.18E-4*soilDF$SM) -0.1011,
                       (1.23E-7*(soilDF$SM^2)) - (1.45E-4*soilDF$SM) +0.203)
 
-ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, Tm6, color=sensorID) )+
-  geom_line()
+ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, Tm6, color=name) )+
+  geom_line()+xlab("Date")+ylab("Soil temperature (C)")+ggtitle("Smith Lake 2")
 
+
+ggplot(soilDF %>%filter(site == "permafrost-free"), aes(akD, Tm6, color=name) )+
+  geom_line()+xlab("Date")+ylab("Soil temperature (C)")+ggtitle("Bicycle bumps")
 
 ggplot(soilDF %>%filter(site == "permafrost"&month==4), aes(akD, Tm6, color=sensorID) )+
   geom_line()
@@ -415,20 +481,16 @@ ggplot(soilDF %>%filter(site == "permafrost"&month==4), aes(akD, Tm6, color=sens
 ggplot(soilDF %>%filter(site == "permafrost"&month==5), aes(akD, Tm6, color=sensorID) )+
   geom_line()
 
-ggplot(soilDF %>%filter(site == "permafrost-free"), aes(akD, Tm6, color=sensorID) )+
-  geom_line()
 
 ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, SM, color=sensorID) )+
   geom_line()
 
-ggplot(soilDF %>%filter(site == "permafrost-free"), aes(akD, SM, color=sensorID) )+
-  geom_line()
+ggplot(soilDF %>%filter(site == "permafrost-free"), aes(akD, SMcor, color=name) )+
+  geom_line()+xlab("Date")+ylab("Soil moisture (cm3 cm-3)")+ggtitle("Bicycle bumps")
 
-ggplot(soilDF %>%filter(site == "permafrost-free"), aes(akD, SMcor, color=sensorID) )+
-  geom_line()
+ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, SMcor, color=name) )+
+  geom_line()+xlab("Date")+ylab("Soil moisture (cm3 cm-3)")+ggtitle("Smith Lake 2")
 
-ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, SMcor, color=sensorID) )+
-  geom_line()
 
 
 
@@ -436,7 +498,8 @@ ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, SMcor, color=sensorID) )
 
 sapNorth$month <- month(sapNorth$date)
 microApril <- sapNorth %>%
-  filter(month == 4 & year == 2026)
+  filter(month == 4 | month == 5) %>% 
+  filter( year == 2026)
 
 microOct <- sapNorth %>%
   filter(month == 10 & year == 2025)
@@ -445,7 +508,7 @@ soilOct <- soilDF  %>%
   filter(month == 10)
 
 soilApril <- soilDF  %>%
-  filter(month == 4)
+  filter(month == 4 | month==5)
 
 
 ggplot(microOct %>% filter(siteID == 1)%>%filter(sensorID == 1 | sensorID ==2 | sensorID ==3), aes(date, sap_mm_s, color=as.factor(sensorID)))+
@@ -457,4 +520,7 @@ ggplot(microApril %>% filter(siteID == 1), aes(date, sap_mm_s, color=as.factor(s
 
 ggplot(soilApril %>% filter(site == "permafrost"), aes(akD, Tm6, color=sitesensor))+
   geom_line()+theme_classic()
+
+
+
 
