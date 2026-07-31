@@ -3,6 +3,9 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 
+
+#Note: NOAA hourly missing data for some measurements. Look for continuous record of weather data
+
 ## read in soil data ----
 
 dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/", # mac
@@ -143,8 +146,12 @@ hourW$year <- year(hourW$date)
 hourW$PrecipT <- ifelse(hourW$HourlyPrecipitation == "T", "0.127",hourW$HourlyPrecipitation)
 hourW$Precip_mm <- as.numeric(hourW$PrecipT)
 hourW$TempC <- as.numeric(hourW$HourlyDryBulbTemperature)
-ggplot(hourW, aes(date,TempC))+
-  geom_line()
+# calculate VPD and atmospheric pressure
+hourW$e.sat <- 0.611*exp((17.502*hourW$HourlyDryBulbTemperature)/(hourW$HourlyDryBulbTemperature+240.97))
+hourW$D <- hourW$e.sat-((hourW$HourlyRelativeHumidity/100)*hourW$e.sat)
+range(hourW$HourlyStationPressure, na.rm=TRUE)
+# convert pressure to Kpa from mb
+hourW$P_KPA <- hourW$HourlyStationPressure*0.1
 
 
 ##### sap allometry -----
@@ -282,38 +289,7 @@ ggplot(dtSite2, aes(dateF, dT, color=as.factor(sensorID)))+
   geom_point()+
   geom_line()
 
-ggplot(dtSite2 %>% filter(year == 2026), aes(dateF, dT, color=as.factor(sensorID)))+
-  geom_point()+
-  geom_line()
 
-ggplot(dtSite2 %>% filter(year == 2025& sensorID !=8), aes(dateF, dT, color=as.factor(sensorID)))+
-  geom_point()+
-  geom_line()
-ggplot(dtSite1 %>% filter(year == 2025), aes(dateF, dT, color=as.factor(sensorID)))+
-  geom_point()+
-  geom_line()
-
-checkS4 <- dtSite2 %>% filter(year == 2026 & sensorID == 4)
-
-ggplot(dtSite1 %>% filter(year == 2026) , aes(dateF, dT, color=as.factor(sensorID)))+
-  geom_point()+
-  geom_line()
-
-ggplot(dtSite2 %>% filter(sensorID == 8) , aes(dateF, dT, color=as.factor(sensorID)))+
-  geom_point()+
-  geom_line()
-
-ggplot(dtSite1, aes(dateF, dT, color=as.factor(sensorID)))+
-  geom_point()+
-  geom_line()
-
-ggplot(dtSite2 %>% filter(sensorID ==4& year==2024), aes(dateF, dT, color=as.factor(sensorID)))+
-  geom_line()     
-
-ggplot(dtSite2 %>% filter(sensorID ==1& year==2025), aes(dateF, dT, color=as.factor(sensorID)))+
-  geom_line()    
-ggplot(dtSite1 %>% filter(sensorID ==1& year==2024), aes(dateF, dT, color=as.factor(sensorID)))+
-  geom_line() 
 
 
 
@@ -436,17 +412,6 @@ sapNorth <- sapHour %>%
   filter(Aspect == "N")
 
 
-
-
-ggplot(sapNorth %>% filter(siteID == 1), aes(date, mm_h, color=as.factor(sensorID)))+
-  geom_line()+
-  geom_point()
-
-
-ggplot(sapNorth %>% filter(siteID == 2), aes(date, mm_h, color=as.factor(sensorID)))+
-  geom_line()+
-  geom_point()
-
 # look at averages for site and genus
 sapHSite <- sapNorth %>%
   na.omit() %>%
@@ -461,20 +426,9 @@ sapHSite$upperE <- sapHSite$sap_mm_h + sapHSite$se
 
 sapHSite$month <- month(sapHSite$date)
 
-ggplot(sapHSite %>% filter(month== 6 & siteID == 1), aes(DD,sap_mm_h,color=as.factor(year)))+
-  geom_line()+
-  geom_point()
-
-ggplot(sapHSite %>% filter(month== 6 & siteID == 2 & Genus == "Picea"), aes(DD,sap_mm_h,color=as.factor(year)))+
-  geom_line()+
-  geom_point()
-
-ggplot(sapHSite %>% filter(month== 6 & siteID == 2 & Genus == "Betula"), aes(DD,sap_mm_h,color=as.factor(year)))+
-  geom_line()+
-  geom_point()
 
 
-# total daily sap flow
+##### El ----
 
 # sapflow in mm per hour
 
@@ -494,12 +448,18 @@ sapNorth$Js <-  sapNorth$m_s * 1000
 sapNorth$El <- sapNorth$Js *(sapNorth$sapwood_area_m/sapNorth$LA_m2)
 sapNorth$El_hr <- sapNorth$El*60*60
 
-ggplot(sapNorth %>% filter(siteID ==1& year== 2024&sensorID==2), aes(date,El_hr,color=as.factor(sensorID)))+
-  geom_line()+
-  geom_point()
-
 sapNorth$E_tree_hr <- sapNorth$Js *sapNorth$sapwood_area_m*60*60
 
+##### Canopy stomatal conductance ----
+hourCheck <- hourW %>%
+  group_by(year,doy,hour) %>%
+  summarize(nobs = n())
+
+hourSap <- left_join(sapNorth, hourW, by=c("Hours"="hour","doy","year"))
+
+##### Daily transpiration ----
+
+# Kg (L) m-2 leaf day-1
 # sum up for entire day
 El_day <- sapNorth %>%
   filter(is.na(El_hr)==FALSE) %>%
@@ -609,7 +569,7 @@ ggplot(El_site %>%filter(month==6 & siteID==2&Genus=="Picea"), aes(doy,ml_m2_day
   geom_point()+
   geom_line()
 
-#### organize soil data ----
+#### organize TOMST soil data ----
 sensorI$SN <- as.character(sensorI$SN)
 
 tomstF <- list.files(dirT)
@@ -659,10 +619,14 @@ ggplot(soilDF %>%filter(site == "permafrost"&month==4), aes(akD, Tm6, color=sens
   geom_line()
 
 
-ggplot(soilDF %>%filter(site == "permafrost"&month==5), aes(akD, Tm6, color=sensorID) )+
+ggplot(soilDF %>%filter(site == "permafrost"&month==10), aes(akD, Tm6, color=sensorID) )+
   geom_line()
 
+ggplot(soilDF %>%filter(site == "permafrost"&month==10|month==9&site=="permafrost"), aes(akD, Tm6, color=sensorID) )+
+  geom_line()
 
+ggplot(soilDF %>%filter(site == "permafrost"&month==10|month==9&site=="permafrost"), aes(akD, SM, color=sensorID) )+
+  geom_line()
 ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, SM, color=sensorID) )+
   geom_line()
 
@@ -691,6 +655,14 @@ soilOct <- soilDF  %>%
 soilApril <- soilDF  %>%
   filter(month == 4 | month==5)
 
+soilSummary <- soilDF %>%
+  group_by(site, location, akD) %>%
+  summarize(tsoil = mean(Tm6))
+soilSummary$month <- month(soilSummary$akD)
+
+ggplot(soilSummary%>%
+         filter(month == 4 | month==5), aes(akD, tsoil, color=paste(site,location)) )+
+  geom_line()
 
 ggplot(microOct %>% filter(siteID == 1)%>%filter(sensorID == 1 | sensorID ==2 | sensorID ==3), aes(date, sap_mm_s, color=as.factor(sensorID)))+
   geom_line()
