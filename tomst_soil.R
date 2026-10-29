@@ -7,7 +7,7 @@ library(tidyr)
 
 dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/", # mac
              "C:/Users/kropp/Documents/AK_sapflow")
-pathI <- 2
+pathI <- 1
 
 dirT <- paste0(dirData[pathI],"/tomst/07_27_26")
 
