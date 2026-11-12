@@ -13,6 +13,7 @@ dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu
 pathI <- 1
 
 ### borehole data
+# no permafrost
 bb_bore <- read.csv(paste0(dirData[pathI],"/11_6_2026/BB1_2024-01-01_2026-11-09_raw.csv"),
                            skip=17, head=FALSE, na.strings="NaN")
 
@@ -22,6 +23,15 @@ colnames(bb_bore) <- c("date","time","dew","rh","solar","tempRH","temp_0","temp_
 bb_names <- read.csv(paste0(dirData[pathI],"/11_6_2026/BB1_2024-01-01_2026-11-09_raw.csv"),
                               skip=15,nrow=2, head=FALSE)
 
+# permafrost
+sml2_bore <- read.csv(paste0(dirData[pathI],"/11_6_2026/SmithLake2_temperature_soilmoisture_112024_1152026.csv"),
+                      skip=9, head=FALSE, na.strings=c("NA","NaN"))
+
+sml2_names <- read.csv(paste0(dirData[pathI],"/11_6_2026/SmithLake2_temperature_soilmoisture_112024_1152026.csv"),
+                      skip=7, nrow=2,head=FALSE, na.strings=c("NA","NaN"))
+colnames(sml2_bore) <- c("timestamp","air_temp","surf_temp","temp_07","temp_15",
+                         "temp_23","temp_30","temp_46","temp_61","temp_81","temp_150","temp_200","temp_300",
+                         "swc_20","swc_40","swc_65","swc_85")
 
 bb_bore$timestamp <- ymd_hms(paste(bb_bore$date, bb_bore$time))
 
