@@ -29,26 +29,13 @@ sml2_bore <- read.csv(paste0(dirData[pathI],"/11_6_2026/SmithLake2_temperature_s
 
 sml2_names <- read.csv(paste0(dirData[pathI],"/11_6_2026/SmithLake2_temperature_soilmoisture_112024_1152026.csv"),
                       skip=7, nrow=2,head=FALSE, na.strings=c("NA","NaN"))
-colnames(sml2_bore) <- c("timestamp","air_temp","surf_temp","temp_07","temp_15",
+colnames(sml2_bore) <- c("times","air_temp","surf_temp","temp_07","temp_15",
                          "temp_23","temp_30","temp_46","temp_61","temp_81","temp_150","temp_200","temp_300",
                          "swc_20","swc_40","swc_65","swc_85")
 
 bb_bore$timestamp <- ymd_hms(paste(bb_bore$date, bb_bore$time))
+sml2_bore$timestamp <- mdy_hm(sml2_bore$times)
 
-bb_bore <- bb_bore |>
-  filter(is.na(tempRH))
-
-bb_bore_day <- bb_bore |>
-  group_by(date) |>
-  summarise(Tsoil_10 = mean(temp_10, na.rm=TRUE),
-            Tsurf = mean(temp_0, na.rm=TRUE),
-            Tsoil_50 = mean(temp_50, na.rm=TRUE))
-bb_bore_day$date <- ymd(bb_bore_day$date)
-ggplot(bb_bore_day, aes(date,Tsoil_10))+
-  geom_line()
-
-ggplot(bb_bore_day, aes(date,Tsoil_50))+
-  geom_line()
 
 dirT <- paste0(dirData[pathI],"/tomst/07_27_26")
 
@@ -192,6 +179,39 @@ range(hourW$HourlyStationPressure, na.rm=TRUE)
 hourW$P_KPA <- hourW$HourlyStationPressure*0.1
 
 
+#### soil data organization ----
+bb_bore <- bb_bore |>
+  filter(is.na(tempRH))
+
+bb_bore_day <- bb_bore |>
+  group_by(date) |>
+  summarise(Tsoil_10 = mean(temp_10, na.rm=TRUE),
+            Tsurf = mean(temp_0, na.rm=TRUE),
+            Tsoil_50 = mean(temp_50, na.rm=TRUE))
+bb_bore_day$date <- ymd(bb_bore_day$date)
+ggplot(bb_bore_day, aes(date,Tsoil_10))+
+  geom_line()
+
+ggplot(bb_bore_day, aes(date,Tsoil_50))+
+  geom_line()
+
+sml2_bore$dates <- as.Date(sml2_bore$timestamp)
+
+sml2_bore_day <- sml2_bore |>
+  group_by(dates)|>
+  summarise(Tsoil_07 = mean(temp_07),
+            Tair_sm = mean(air_temp),
+            Tsurf = mean(surf_temp))
+
+ggplot(sml2_bore_day)+
+  geom_line(aes(dates,Tsoil_07))+
+  geom_line(aes(dates,Tair_sm),color="tomato3")
+
+soil_sites_day <- data.frame(date = c(bb_bore_day$date, sml2_bore_day$dates),
+                             Tsoil = c(bb_bore_day$Tsoil_10, sml2_bore_day$Tsoil_07),
+                             location = c(rep("no permafrost",nrow(bb_bore_day)),rep("permafrost",nrow(sml2_bore_day))))
+ggplot(soil_sites_day, aes(date,Tsoil,color=location))+
+  geom_line()
 ##### sap allometry -----
 # BENE allometry 
 
