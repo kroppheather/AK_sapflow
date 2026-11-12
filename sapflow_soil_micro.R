@@ -12,6 +12,34 @@ dirData <- c("/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu
              "C:/Users/kropp/Documents/AK_sapflow")
 pathI <- 1
 
+### borehole data
+bb_bore <- read.csv(paste0(dirData[pathI],"/11_6_2026/BB1_2024-01-01_2026-11-09_raw.csv"),
+                           skip=17, head=FALSE, na.strings="NaN")
+
+colnames(bb_bore) <- c("date","time","dew","rh","solar","tempRH","temp_0","temp_10",
+                       "temp_50","temp_120_1","temp_120_2","temp_150","swc_10","swc_50", "empty")
+
+bb_names <- read.csv(paste0(dirData[pathI],"/11_6_2026/BB1_2024-01-01_2026-11-09_raw.csv"),
+                              skip=15,nrow=2, head=FALSE)
+
+
+bb_bore$timestamp <- ymd_hms(paste(bb_bore$date, bb_bore$time))
+
+bb_bore <- bb_bore |>
+  filter(is.na(tempRH))
+
+bb_bore_day <- bb_bore |>
+  group_by(date) |>
+  summarise(Tsoil_10 = mean(temp_10, na.rm=TRUE),
+            Tsurf = mean(temp_0, na.rm=TRUE),
+            Tsoil_50 = mean(temp_50, na.rm=TRUE))
+bb_bore_day$date <- ymd(bb_bore_day$date)
+ggplot(bb_bore_day, aes(date,Tsoil_10))+
+  geom_line()
+
+ggplot(bb_bore_day, aes(date,Tsoil_50))+
+  geom_line()
+
 dirT <- paste0(dirData[pathI],"/tomst/07_27_26")
 
 sensorI <- read.csv(paste0(dirData[pathI], "/tomst/sensor_sn.csv"))
