@@ -44,6 +44,13 @@ sensorI <- read.csv(paste0(dirData[pathI], "/tomst/sensor_sn.csv"))
 #BENE sapwood allometry
 bene <- read.csv(paste0(dirData[pathI], "/BENE allometry.csv"))
 
+site1_check <- read.table(paste0(dirData[pathI],"/11_6_2026/CR1000_sap_sl2_TableTC.dat"),
+                          sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
+
+site2_check <- read.table(paste0(dirData[pathI],"/11_6_2026/CR1000XSeries_TableTC.dat"),
+                          sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
+
 # read in data
 # set date for most current data
 endDate <- "07-27-2026 09:00"
