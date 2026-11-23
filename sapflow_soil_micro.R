@@ -39,7 +39,7 @@ sml2_bore$timestamp <- mdy_hm(sml2_bore$times)
 
 dirT <- paste0(dirData[pathI],"/tomst/07_27_26")
 
-sensorI <- read.csv(paste0(dirData[pathI], "/tomst/sensor_sn.csv"))
+sensorI <- read.csv(paste0(dirData[pathI], "/tomst/sensor_sn.csv"))[1:10,]
 
 #BENE sapwood allometry
 bene <- read.csv(paste0(dirData[pathI], "/BENE allometry.csv"))
@@ -60,28 +60,12 @@ sensors$stDate <- mdy_hm(sensors$start_date)
 sensors$edDate <- mdy_hm(sensors$endD)
 # permafrost spruce
 # updated data 11/26:
-site1c <- read.table(paste0(dirData[pathI],"/11_26_2025/CR1000_sap_sl2_TableTC.dat"),
-                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-site1c <- site1c[,1:12] 
-site1_all <- read.table(paste0(dirData[pathI],"/11_26_2025/CR1000_sap_sl2_TableTC.dat"),
-                        sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
-
-site1_batt <- read.table(paste0(dirData[pathI],"/11_26_2025/CR1000_sap_sl2_TableTC.dat"),
-                         sep=",", skip=1, na.strings=c("NA","NAN"))[,c(1,55:60)]
-
-#site1d has all recent data since 4/24
-
-site1d <- read.table(paste0(dirData[pathI],"/05_15_2026/CR1000_sap_sl2_TableTC.dat"),
-                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
-
-site1d <- site1d[,1:12] 
-
-site1_battd <- read.table(paste0(dirData[pathI],"/05_15_2026/CR1000_sap_sl2_TableTC.dat"),
+site1_batt <- read.table(paste0(dirData[pathI],"/11_6_2026/CR1000_sap_sl2_TableTC.dat"),
                           sep=",", skip=1, na.strings=c("NA","NAN"))[,c(1,55:60)]
 
-site1e <- read.table(paste0(dirData[pathI],"/07_27_2026/CR1000_sap_sl2_TableTC.dat"),
-                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))[,1:12] 
+site1e <- read.table(paste0(dirData[pathI],"/11_6_2026/CR1000_sap_sl2_TableTC.dat"),
+                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))[,1:14] 
 # deciduous non-permafrost
 site2 <- read.table(paste0(dirData[pathI],"/07_03_2024/Sapflow_TableDT.dat"),
                     sep=",", header=FALSE, skip=4)
@@ -124,8 +108,13 @@ site2e_batt$date <- ymd_hms(site2e_batt$V1)
 ggplot(site2e_batt, aes(date,V169))+
   geom_line()
 
+site2f <- read.table(paste0(dirData[pathI],"/11_6_2026/CR1000XSeries_TableTC.dat"),
+                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))[14607:17916,1:18]
+
+
+
 # sensor 5 moved to slot 12, sensor 8 moved to slot 16 on 8/20
-site2_bind <- rbind(site2, site2c,site2d,site2e)
+site2_bind <- rbind(site2, site2c,site2d,site2e,site2f)
 
 
 
@@ -133,7 +122,7 @@ site2_bind <- rbind(site2, site2c,site2d,site2e)
 
 ##### organize weather data ----
 ## weather 
-weather <- read.csv(paste0(dirData[pathI],"/weather/4363851.csv"))
+weather <- read.csv(paste0(dirData[pathI],"/weather/4431973.csv"))
 
 
 #RH and Precip
