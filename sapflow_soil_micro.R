@@ -36,21 +36,38 @@ colnames(sml2_bore) <- c("times","air_temp","surf_temp","temp_07","temp_15",
 bb_bore$timestamp <- ymd_hms(paste(bb_bore$date, bb_bore$time))
 sml2_bore$timestamp <- mdy_hm(sml2_bore$times)
 
-
+# Tomst sensors
 dirT <- paste0(dirData[pathI],"/tomst/07_27_26")
 
 sensorI <- read.csv(paste0(dirData[pathI], "/tomst/sensor_sn.csv"))[1:10,]
 
-#BENE sapwood allometry
+
+tomstF <- list.files(dirT)
+fileSN <- character()
+for(i in 1:length(tomstF)){
+  fileSN[i] <- as.numeric(strsplit(tomstF, "_")[[i]][2])
+}
+fileSNn <- as.numeric(fileSN)
+
+# read in files
+datT <- list()
+# for some reason software is defaulting to East coste despite 
+for(i in 1: length(fileSN)){
+  datT[[i]] <- read.csv(paste0(dirT,"/",tomstF[i]), sep=";",
+                        header=FALSE)[,1:9]
+  colnames(datT[[i]])[1:9] <- c("record","date","tz","Tm6","T2","T15","SM","shake","errFlag")
+  datT[[i]]$SN <- as.integer(rep(fileSN[i], nrow(datT[[i]])))
+  
+  datT[[i]]$dateF <- ymd_hm(datT[[i]]$date, tz="Etc/GMT+4") 
+  datT[[i]]$akD <- with_tz(datT[[i]]$dateF, tzone="America/Anchorage")
+}
+
+tomstAll <- do.call("rbind",datT)
+##### BENE sapwood allometry ----
 bene <- read.csv(paste0(dirData[pathI], "/BENE allometry.csv"))
 
-site1_check <- read.table(paste0(dirData[pathI],"/11_6_2026/CR1000_sap_sl2_TableTC.dat"),
-                          sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
 
-
-site2_check <- read.table(paste0(dirData[pathI],"/11_6_2026/CR1000XSeries_TableTC.dat"),
-                          sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))
-
+##### sapflow ----
 # read in data
 # set date for most current data
 endDate <- "07-27-2026 09:00"
@@ -65,7 +82,7 @@ site1_batt <- read.table(paste0(dirData[pathI],"/11_6_2026/CR1000_sap_sl2_TableT
                           sep=",", skip=1, na.strings=c("NA","NAN"))[,c(1,55:60)]
 
 site1e <- read.table(paste0(dirData[pathI],"/11_6_2026/CR1000_sap_sl2_TableTC.dat"),
-                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))[,1:14] 
+                     sep=",", header=FALSE, skip=4, na.strings=c("NA","NAN"))[,1:12] 
 # deciduous non-permafrost
 site2 <- read.table(paste0(dirData[pathI],"/07_03_2024/Sapflow_TableDT.dat"),
                     sep=",", header=FALSE, skip=4)
@@ -203,11 +220,53 @@ ggplot(sml2_bore_day)+
   geom_line(aes(dates,Tsoil_07))+
   geom_line(aes(dates,Tair_sm),color="tomato3")
 
-soil_sites_day <- data.frame(date = c(bb_bore_day$date, sml2_bore_day$dates),
-                             Tsoil = c(bb_bore_day$Tsoil_10, sml2_bore_day$Tsoil_07),
-                             location = c(rep("no permafrost",nrow(bb_bore_day)),rep("permafrost",nrow(sml2_bore_day))))
-ggplot(soil_sites_day, aes(date,Tsoil,color=location))+
+soil_sites_day <- data.frame(date_day = c(bb_bore_day$date, sml2_bore_day$dates),
+                             site = c(rep("permafrost-free",nrow(bb_bore_day)),rep("permafrost",nrow(sml2_bore_day))),
+                             location = c(rep("open",nrow(bb_bore_day)),rep("open",nrow(sml2_bore_day))),
+                             sitesensor= c(rep("bb_bore",nrow(bb_bore_day)),rep("sml2_bore",nrow(sml2_bore_day))),
+                             Tsoil = c(bb_bore_day$Tsoil_10, sml2_bore_day$Tsoil_07))
+ggplot(soil_sites_day, aes(date_day,Tsoil,color=site))+
   geom_line()
+
+## tomst soil
+
+# filter out before installation
+soilDF <- left_join(tomstAll, sensorI, by="SN") |>
+  filter(dateF >= ymd("2025-08-20"))
+soilDF$month <- month(soilDF$akD)
+
+# permafrost-free silt loam
+#unsure what calibration will be for permafrost. Putting in Peat as placeholder
+
+soilDF$SMcor <- ifelse(soilDF$site == "permafrost-free",
+                       (1.70E-8*(soilDF$SM^2)) + (1.18E-4*soilDF$SM) -0.1011,
+                       (1.23E-7*(soilDF$SM^2)) - (1.45E-4*soilDF$SM) +0.203)
+
+
+ggplot(soilDF, aes(date_day, Tm6, color=sitesensor) )+
+  geom_line()
+soilDF$date_day <- as.Date(soilDF$akD)
+soil_t_day <- soilDF |>
+  group_by(date_day, site, location, sitesensor ) |>
+  summarize(Tsoil = mean(Tm6))
+
+soil_all_app <- rbind(soil_sites_day, soil_t_day)
+
+ggplot(soil_all_app, aes(date_day, Tsoil, color=sitesensor) )+
+  geom_line()
+
+soil_all_ave <- soil_all_app |>
+  group_by(date_day, site,location) |>
+  summarize(Ts = mean(Tsoil),
+            sd_Ts = sd(Tsoil),
+            n_Ts = n())
+
+ggplot(soil_all_ave, aes(date_day, Ts, color=paste(site,location)))+
+  geom_line()
+
+ggplot(soil_sites_day, aes(date_day,Tsoil,color=site))+
+  geom_line()
+
 ##### sap allometry -----
 # BENE allometry 
 
@@ -577,7 +636,7 @@ ggplot(El_site %>%filter(year==2025&siteID==1), aes(date,ml_m2_day, color=paste(
   geom_point()
 
 ggplot(El_site %>%filter(year==2026&siteID==1), aes(date,ml_m2_day, color=paste(siteName,Genus)))+
-  geom_point()
+  geom_point()+geom_line()
 
 
 
@@ -623,79 +682,14 @@ ggplot(El_site %>%filter(month==6 & siteID==2&Genus=="Picea"), aes(doy,ml_m2_day
   geom_point()+
   geom_line()
 
-#### organize TOMST soil data ----
-sensorI$SN <- as.character(sensorI$SN)
-
-tomstF <- list.files(dirT)
-fileSN <- character()
-for(i in 1:length(tomstF)){
-  fileSN[i] <- as.numeric(strsplit(tomstF, "_")[[i]][2])
-}
-fileSNn <- as.numeric(fileSN)
-
-# read in files
-datT <- list()
-# for some reason software is defaulting to East coste despite 
-for(i in 1: length(fileSN)){
-  datT[[i]] <- read.csv(paste0(dirT,"/",tomstF[i]), sep=";",
-                        header=FALSE)[,1:9]
-  colnames(datT[[i]])[1:9] <- c("record","date","tz","Tm6","T2","T15","SM","shake","errFlag")
-  datT[[i]]$SN <- rep(fileSN[i], nrow(datT[[i]]))
-  
-  datT[[i]]$dateF <- ymd_hm(datT[[i]]$date, tz="Etc/GMT+4") 
-  datT[[i]]$akD <- with_tz(datT[[i]]$dateF, tzone="America/Anchorage")
-}
-
-tomstAll <- do.call("rbind",datT)
-# filter out before installation
-soilDF <- left_join(tomstAll, sensorI, by="SN")%>%
-  filter(dateF >= ymd("2025-08-20"))
-soilDF$month <- month(soilDF$akD)
-
-ggplot(soilDF, aes(akD, Tm6, color=sitesensor) )+
-  geom_line()
-
-# permafrost-free silt loam
-#unsure what calibration will be for permafrost. Putting in Peat as placeholder
-
-soilDF$SMcor <- ifelse(soilDF$site == "permafrost-free",
-                      (1.70E-8*(soilDF$SM^2)) + (1.18E-4*soilDF$SM) -0.1011,
-                      (1.23E-7*(soilDF$SM^2)) - (1.45E-4*soilDF$SM) +0.203)
-
-ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, Tm6, color=name) )+
-  geom_line()+xlab("Date")+ylab("Soil temperature (C)")+ggtitle("Smith Lake 2")
-
-
-ggplot(soilDF %>%filter(site == "permafrost-free"), aes(akD, Tm6, color=name) )+
-  geom_line()+xlab("Date")+ylab("Soil temperature (C)")+ggtitle("Bicycle bumps")
-
-ggplot(soilDF %>%filter(site == "permafrost"&month==4), aes(akD, Tm6, color=sensorID) )+
-  geom_line()
-
-
-ggplot(soilDF %>%filter(site == "permafrost"&month==10), aes(akD, Tm6, color=sensorID) )+
-  geom_line()
-
-ggplot(soilDF %>%filter(site == "permafrost"&month==10|month==9&site=="permafrost"), aes(akD, Tm6, color=sensorID) )+
-  geom_line()
-
-ggplot(soilDF %>%filter(site == "permafrost"&month==10|month==9&site=="permafrost"), aes(akD, SM, color=sensorID) )+
-  geom_line()
-ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, SM, color=sensorID) )+
-  geom_line()
-
-ggplot(soilDF %>%filter(site == "permafrost-free"), aes(akD, SMcor, color=name) )+
-  geom_line()+xlab("Date")+ylab("Soil moisture (cm3 cm-3)")+ggtitle("Bicycle bumps")
-
-ggplot(soilDF %>%filter(site == "permafrost"), aes(akD, SMcor, color=name) )+
-  geom_line()+xlab("Date")+ylab("Soil moisture (cm3 cm-3)")+ggtitle("Smith Lake 2")
-
-
 
 
 ############## plotting for microclimate
 
 sapNorth$month <- month(sapNorth$date)
+soil_sites_day$month <- month(soil_sites_day$date_day)
+soil_sites_day$year <- year(soil_sites_day$date_day)
+
 microApril <- sapNorth %>%
   filter(month == 4 | month == 5) %>% 
   filter( year == 2026)
@@ -703,19 +697,13 @@ microApril <- sapNorth %>%
 microOct <- sapNorth %>%
   filter(month == 10 & year == 2025)
 
-soilOct <- soilDF  %>%
+soilOct <- soil_sites_day  %>%
   filter(month == 10)
 
-soilApril <- soilDF  %>%
+soilApril <- soil_sites_day  %>%
   filter(month == 4 | month==5)
 
-soilSummary <- soilDF %>%
-  group_by(site, location, akD) %>%
-  summarize(tsoil = mean(Tm6))
-soilSummary$month <- month(soilSummary$akD)
-
-ggplot(soilSummary%>%
-         filter(month == 4 | month==5), aes(akD, tsoil, color=paste(site,location)) )+
+ggplot(soilApril |> filter(year==2026), aes(date_day, Tsoil, color=paste(site,location)) )+
   geom_line()
 
 ggplot(microOct %>% filter(siteID == 1)%>%filter(sensorID == 1 | sensorID ==2 | sensorID ==3), aes(date, sap_mm_s, color=as.factor(sensorID)))+
@@ -732,10 +720,10 @@ ggplot(soilApril %>% filter(site == "permafrost"), aes(akD, Tm6, color=sitesenso
 
 #####################
 # examine both soil and El for overlapping data
-soilDF$date <- as.Date(soilDF$akD)
-soilDF$siteID <- ifelse(soilDF$site == "permafrost",1,2)
 
-dailySoil <- soilDF %>%
+soil_sites_day$siteID <- ifelse(soil_sites_day$site == "permafrost",1,2)
+
+dailySoil <- soil_sites_day %>%
   group_by(date, siteID) %>%
   summarise(Tsoil = mean(Tm6),
             SMsoil = mean(SMcor))
