@@ -3,7 +3,8 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 
-
+# graphing directory
+dirSave <- "/Users/hkropp/Library/CloudStorage/GoogleDrive-hkropp@hamilton.edu/My Drive/research/projects/AK_sapflow/AGU26"
 #Note: NOAA hourly missing data for some measurements. Look for continuous record of weather data
 
 ## read in soil data ----
@@ -70,7 +71,7 @@ bene <- read.csv(paste0(dirData[pathI], "/BENE allometry.csv"))
 ##### sapflow ----
 # read in data
 # set date for most current data
-endDate <- "07-27-2026 09:00"
+endDate <- "10-28-2026 00:00"
 sensors <- read.csv(paste0(dirData[pathI],"/sensors_25.csv"))
 sensors$endD <- ifelse(sensors$end_date == "current", endDate, sensors$end_date)
 sensors$stDate <- mdy_hm(sensors$start_date)
@@ -190,8 +191,13 @@ hourW$D <- hourW$e.sat-((hourW$HourlyRelativeHumidity/100)*hourW$e.sat)
 range(hourW$HourlyStationPressure, na.rm=TRUE)
 # convert pressure to Kpa from mb
 hourW$P_KPA <- hourW$HourlyStationPressure*0.1
-
-
+dayVPD <- hourW |>
+  select(doy,month,year,D,P_KPA) |>
+  group_by(doy, month, year) |>
+  summarize(VPD = mean(D, na.rm=TRUE),
+            P = mean(P_KPA, na.rm=TRUE),
+            n=n())
+dayVPD$date <- as.Date(dayVPD$doy-1, origin = paste0(dayVPD$year,"-01-01"))
 #### soil data organization ----
 bb_bore <- bb_bore |>
   filter(is.na(tempRH))
@@ -266,6 +272,10 @@ ggplot(soil_all_ave, aes(date_day, Ts, color=paste(site,location)))+
 
 ggplot(soil_sites_day, aes(date_day,Tsoil,color=site))+
   geom_line()
+
+soil_swc_day <- soilDF |>
+  group_by(date_day, site, location ) |>
+  summarize(swc = mean(SMcor))
 
 ##### sap allometry -----
 # BENE allometry 
@@ -539,7 +549,23 @@ sapHSite$upperE <- sapHSite$sap_mm_h + sapHSite$se
 
 sapHSite$month <- month(sapHSite$date)
 
+sapDSensor <- sapNorth|>
+  na.omit() |>
+  group_by( doy, year, siteID, siteName,month, Genus,sensorID) %>%
+  summarise(sap_mm_d = sum(mm_h),
+            n=n())|>
+  filter(n >= 20)
 
+sapDSite <- sapDSensor |>
+  group_by( doy, year, month, siteID, siteName, Genus) |>
+  summarise(sap_mm_day = mean(sap_mm_d),
+            sd_mm_day = sd(sap_mm_d), 
+            n_mm_day = n()) |>
+  filter(n_mm_day >= 3)
+sapDSite$Name <- paste(sapDSite$siteName, sapDSite$Genus)
+sapDSite$se <- sapDSite$sd_mm_day /sqrt(sapDSite$n_mm_day)
+sapDSite$lowerE <- sapDSite$sap_mm_day - sapDSite$se
+sapDSite$upperE <- sapDSite$sap_mm_day + sapDSite$se
 
 ##### El ----
 
@@ -595,6 +621,68 @@ El_site$ml_m2_day <- El_site$El_site*1000
 El_site$month <- month(El_site$date)
 
 El_site <- left_join(El_site,dailyW, by="date")
+El_site$site <- ifelse(El_site$siteName == "Bicycle bumps", "permafrost-free",
+                       ifelse(El_site$siteName == "Permafrost","permafrost",NA)      )
+
+
+canopy_micro <- soil_all_ave |>
+  filter(location == "canopy")
+canopy_swc <- soil_swc_day |>
+  filter(location == "canopy")
+
+El_micro1 <- inner_join(El_site, canopy_micro, by=c("site","date"="date_day"))
+El_micro2 <- inner_join(El_micro1, canopy_swc, by=c("site","date"="date_day"))
+
+El_micro <- left_join(El_micro2, dayVPD, by="date" ) |>
+  filter(year.x == 2026) |>
+  filter(doy.x >= 151 & doy.x <= 244)
+
+
+
+ggplot(El_micro, aes(Ts,El_site, color=paste(site,Genus)))+
+  geom_point()
+
+ggplot(El_micro, aes(swc,El_site, color=paste(site,Genus)))+
+  geom_point()
+
+ggplot(El_micro, aes(VPD,El_site, color=paste(site,Genus)))+
+  geom_point()
+
+ggplot(El_micro, aes(swc,Ts, color=paste(site,Genus)))+
+  geom_point()
+
+
+bp.El <- El_micro |>
+  filter(site == "permafrost-free" & Genus == "Picea")
+El.mod.bp <- lm(bp.El$El_site ~ bp.El$Ts + bp.El$VPD)
+bp.res <- rstandard(El.mod.bp)
+bp.fit <- fitted(El.mod.bp)
+qqnorm(bp.res)
+qqline(bp.res)
+plot(bp.fit,bp.res)
+abline(h=0)
+summary(El.mod.bp)
+
+bb.El <- El_micro |>
+  filter(site == "permafrost-free" & Genus == "Betula")
+El.mod.bb <- lm(bb.El$El_site ~ bb.El$swc + bb.El$VPD)
+bb.res <- rstandard(El.mod.bb)
+bb.fit <- fitted(El.mod.bb)
+qqnorm(bb.res)
+qqline(bb.res)
+plot(bb.fit,bb.res)
+summary(El.mod.bb)
+
+pp.El <- El_micro |>
+  filter(site == "permafrost")
+El.mod.pp <- lm(pp.El$El_site ~ pp.El$swc + pp.El$VPD)
+pp.res <- rstandard(El.mod.pp)
+pp.fit <- fitted(El.mod.pp)
+qqnorm(pp.res)
+qqline(pp.res)
+plot(pp.fit,pp.res)
+summary(El.mod.pp)
+
 
 
 
@@ -602,3 +690,186 @@ El_site <- left_join(El_site,dailyW, by="date")
 sapNorth$month <- month(sapNorth$date)
 soil_sites_day$month <- month(soil_sites_day$date_day)
 soil_sites_day$year <- year(soil_sites_day$date_day)
+
+
+sapDSite$date <- as.Date(sapDSite$doy-1, origin = paste0(sapDSite$year, "-01-01"))
+
+weather_day <- dailyW |>
+  select(date, precip, pastPrecip, sDepth_cm,DailyMaximumDryBulbTemperature,DailyMinimumDryBulbTemperature, DailyAverageDryBulbTemperature)
+daysap <- left_join(sapDSite, weather_day, by="date")
+
+
+###### Graphing parms ----
+colsSxS <- c("#C187C7", # permafrost picea
+             "#007C57", # bb picea
+             "#ADDABC") # bb betula 
+colsSxStt <- c("#C187C799", # permafrost picea
+               "#007C5799", # bb picea
+               "#ADDABC99") # bb betula 
+
+colsSite <- c("#C187C7", #permafrost
+              "#007C57")
+
+########## graphing: spring patterns ----
+
+
+# make graphs of data by doy
+
+
+wd <- 15
+hd <- 4
+# cex axis
+ca <- 2.5
+# line for first label
+ll1 <- 4
+# line for doy
+llxa <- 1.75
+# cex for label text
+cma <- 2
+# cex for doy labels
+cax <- 2
+# legend size
+lgc <- 2
+# mai size
+ma <- 0.6
+
+# x limits
+dl <- 93
+du <- 135
+# day seq
+dayseq <- seq(93,180, by=10)
+dayseql <- c("",seq(100,180, by=10))
+
+
+# cex axis
+ca <- 2.5
+# line for first label
+ll1 <- 4
+# line for doy
+llxa <- 1.75
+# cex for label text
+cma <- 2
+# cex for doy labels
+cax <- 2
+# legend size
+lgc <- 2
+# mai size
+ma <- 0.6
+# day seq
+dl <- 109
+du <-117
+dayseq <- seq(dl,du, by=0.5)
+dayseql <- seq(dl,du, by=1)
+
+wd <- 8
+hd <- 4
+png(paste0(dirSave, "/sapflow_soil_hour.png"), width=9.5, height=9, units="in", res=150)
+layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plot1 <- sapHSite |>
+  filter(year == 2024 & siteName == "Permafrost")
+points(plot1$DD-1, plot1$sap_mm_h, col=colsSxStt[1], pch=19)
+
+plot2 <- sapHSite |>
+  filter(year == 2024 & siteName == "Bicycle bumps" & Genus == "Picea")
+points(plot2$DD-1, plot2$sap_mm_h, col=colsSxStt[2], pch=19)
+
+
+plot3 <- sapHSite |>
+  filter(year == 2024 & siteName == "Bicycle bumps" & Genus == "Betula")
+points(plot3$DD-1, plot3$sap_mm_h, col=colsSxStt[3], pch=19)
+
+
+
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plot1 <- sapHSite |>
+  filter(year == 2025 & siteName == "Permafrost")
+points(plot1$DD, plot1$sap_mm_h, col=colsSxStt[1], pch=19)
+
+plot2 <- sapHSite |>
+  filter(year == 2025 & siteName == "Bicycle bumps" & Genus == "Picea")
+points(plot2$DD, plot2$sap_mm_h, col=colsSxStt[2], pch=19)
+
+
+plot3 <- sapHSite |>
+  filter(year == 2025 & siteName == "Bicycle bumps" & Genus == "Betula")
+points(plot3$DD, plot3$sap_mm_h, col=colsSxStt[3], pch=19)
+
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plot1 <- sapHSite |>
+  filter(year == 2026 & siteName == "Permafrost")
+points(plot1$DD, plot1$sap_mm_h, col=colsSxStt[1], pch=19)
+
+plot2 <- sapHSite |>
+  filter(year == 2026 & siteName == "Bicycle bumps" & Genus == "Picea")
+points(plot2$DD, plot2$sap_mm_h, col=colsSxStt[2], pch=19)
+
+
+plot3 <- sapHSite |>
+  filter(year == 2026 & siteName == "Bicycle bumps" & Genus == "Betula")
+points(plot3$DD, plot3$sap_mm_h, col=colsSxStt[3], pch=19)
+
+
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,100),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+
+plot1 <- sapHSite |>
+  filter(year == 2024 & siteName == "Permafrost") |>
+  arrange(DD)
+points(plot1$DD-1, plot1$sap_mm_h, col=colsSxStt[1], pch=19, type="b")
+
+plot2 <- sapHSite |>
+  filter(year == 2025 & siteName == "Permafrost") |>
+  arrange(DD)
+points(plot2$DD, plot2$sap_mm_h, col="dodgerblue4", pch=19, type="b")
+
+
+plot3 <- sapHSite |>
+  filter(year == 2026 & siteName == "Permafrost") |>
+  arrange(DD)
+points(plot3$DD, plot3$sap_mm_h, col="gray50", pch=19, type="b")
+
+
+weather_day$doy <- yday(weather_day$date)
+weather_day$year <- year(weather_day$date)
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(-40,20),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plot1 <- weather_day |>
+  filter(year==2024)
+
+points(plot1$doy-1,plot1$DailyMaximumDryBulbTemperature, type="l", col=colsSxStt[1])
+
+points(plot1$doy-1,plot1$DailyMinimumDryBulbTemperature, type="l", col=colsSxStt[1])
+
+plot2 <- weather_day |>
+  filter(year==2025)
+
+points(plot2$doy-1,plot2$DailyMaximumDryBulbTemperature, type="l", col="dodgerblue4")
+
+points(plot2$doy-1,plot2$DailyMinimumDryBulbTemperature, type="l", col="dodgerblue4")
+
+plot3 <- weather_day |>
+  filter(year==2026)
+
+points(plot3$doy-1,plot3$DailyMaximumDryBulbTemperature, type="l", col="gray30")
+
+points(plot3$doy-1,plot3$DailyMinimumDryBulbTemperature, type="l", col="gray30")
+
