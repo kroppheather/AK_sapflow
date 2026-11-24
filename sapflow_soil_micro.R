@@ -141,8 +141,14 @@ site2_bind <- rbind(site2, site2c,site2d,site2e,site2f)
 ##### organize weather data ----
 ## weather 
 weather <- read.csv(paste0(dirData[pathI],"/weather/4431973.csv"))
-
-
+weather <- weather |>
+  select(c(DATE,REPORT_TYPE,DailyMaximumDryBulbTemperature,DailyMinimumDryBulbTemperature, DailyAverageDryBulbTemperature, DailySnowDepth,DailyPrecipitation,
+           HourlyPrecipitation,HourlyDryBulbTemperature,HourlyRelativeHumidity,HourlyStationPressure))
+weather_gap <- read.csv(paste0(dirData[pathI],"/weather/4437953.csv"))
+weather_gap <- weather_gap |>
+  select(c(DATE,REPORT_TYPE,DailyMaximumDryBulbTemperature,DailyMinimumDryBulbTemperature, DailyAverageDryBulbTemperature, DailySnowDepth,DailyPrecipitation,
+           HourlyPrecipitation,HourlyDryBulbTemperature,HourlyRelativeHumidity,HourlyStationPressure))
+weather <- rbind(weather,weather_gap)
 #RH and Precip
 # time in is local standard time
 hourW <- weather %>%
@@ -162,9 +168,11 @@ dailyW$sDepth_cm <- dailyW$snowD_cm
 ggplot(dailyW, aes(date,snowD_cm))+
   geom_line()
 dailyW$month <- month(dailyW$date)
-ggplot(dailyW %>% filter(month==4), aes(date,sDepth_cm))+
+ggplot(dailyW, aes(date,DailyAverageDryBulbTemperature))+
   geom_line()
 dailyW$precip <- ifelse(dailyW$DailyPrecipitation == "T",0,as.numeric(dailyW$DailyPrecipitation))
+dailyW <- dailyW |>
+  arrange(date)
 pastPr <- numeric()
 for(i in 7:nrow(dailyW)){
   pastPr[i] <- sum(dailyW$precip[i:(i-6)])
@@ -686,7 +694,7 @@ summary(El.mod.pp)
 
 
 
-############## plotting 
+############## plotting ----
 sapNorth$month <- month(sapNorth$date)
 soil_sites_day$month <- month(soil_sites_day$date_day)
 soil_sites_day$year <- year(soil_sites_day$date_day)
@@ -698,7 +706,11 @@ weather_day <- dailyW |>
   select(date, precip, pastPrecip, sDepth_cm,DailyMaximumDryBulbTemperature,DailyMinimumDryBulbTemperature, DailyAverageDryBulbTemperature)
 daysap <- left_join(sapDSite, weather_day, by="date")
 
+dailyW$doy <- yday(dailyW$date)
+dailyW$year <- year(dailyW$date)
 
+soil_all_ave$year <- year(soil_all_ave$date_day)
+soil_all_ave$doy <- yday(soil_all_ave$date_day)
 ###### Graphing parms ----
 colsSxS <- c("#C187C7", # permafrost picea
              "#007C57", # bb picea
@@ -716,55 +728,61 @@ colsSite <- c("#C187C7", #permafrost
 # make graphs of data by doy
 
 
-wd <- 15
-hd <- 4
-# cex axis
-ca <- 2.5
-# line for first label
-ll1 <- 4
-# line for doy
-llxa <- 1.75
-# cex for label text
-cma <- 2
-# cex for doy labels
-cax <- 2
-# legend size
-lgc <- 2
-# mai size
-ma <- 0.6
-
 # x limits
 dl <- 93
 du <- 135
-# day seq
-dayseq <- seq(93,180, by=10)
-dayseql <- c("",seq(100,180, by=10))
 
 
 # cex axis
-ca <- 2.5
+ca <- 3
 # line for first label
-ll1 <- 4
+ll1 <- 5
+
+ll2 <- 7
+
+ll3 <- 11
 # line for doy
-llxa <- 1.75
+llxa <- 2
 # cex for label text
 cma <- 2
-# cex for doy labels
-cax <- 2
+cml <- 3
 # legend size
 lgc <- 2
 # mai size
-ma <- 0.6
-# day seq
-dl <- 109
-du <-117
+ma <- 0.7
+# axis tick
+lw.t <- 3
+# point size
+cl <- 1.25
+# line thickness
+lwW <- 2
+# 
+y_sl <- -20
+y_hh <- 20
+
+prMax<- 80
+
+xseq <- c(91,105,120,135,140)
+lseq <- c("", "Apr-15","Apr-30","May-15","")
+yseqJ <- seq(0,160,by=20)
+yseqT <- seq(-20,20, by=10)
+yseqPr <- seq(0,80,by=10)
+
+precipRescale <- function(x,precipMax,ylf,yhf) {
+  (((yhf-ylf)/precipMax)*x)+ylf
+}
+precipRescale(10,prMax,y_sl,y_hh)
+
 dayseq <- seq(dl,du, by=0.5)
 dayseql <- seq(dl,du, by=1)
 
 wd <- 8
-hd <- 4
-png(paste0(dirSave, "/sapflow_soil_hour.png"), width=9.5, height=9, units="in", res=150)
-layout(matrix(seq(1,2),ncol=1), width=lcm(rep(wd*2.54,1)),height=lcm(c(hd,hd)*2.54))
+hd <- 5
+png(paste0(dirSave, "/sapflow_soil_hour.png"), width=26, height=12, units="in", res=100)
+layout(matrix(c(1,2,3,4,5,6),ncol=3, byrow=FALSE), width=lcm(rep(wd,3)*2.54),height=lcm(c(hd,hd)*2.54))
+
+
+## 2024
 par(mai= c(ma,ma,ma,ma))
 
 plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
@@ -772,104 +790,482 @@ plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
      xlab = " ", ylab=" ")
 
 plot1 <- sapHSite |>
-  filter(year == 2024 & siteName == "Permafrost")
-points(plot1$DD-1, plot1$sap_mm_h, col=colsSxStt[1], pch=19)
-
+  filter(year == 2024 & siteName == "Permafrost"& DD > 97) |>
+  arrange(DD)
+points(plot1$DD-1, plot1$sap_mm_h, col=colsSxStt[1], pch=19, type="b", cex=cl)
+arrows(plot1$DD-1, plot1$lowerE,plot1$DD-1, plot1$upperE, col=colsSxStt[1], code=0)
 plot2 <- sapHSite |>
-  filter(year == 2024 & siteName == "Bicycle bumps" & Genus == "Picea")
-points(plot2$DD-1, plot2$sap_mm_h, col=colsSxStt[2], pch=19)
-
+  filter(year == 2024 & siteName == "Bicycle bumps" & Genus == "Picea"& DD > 97)|>
+  arrange(DD)
+points(plot2$DD-1, plot2$sap_mm_h, col=colsSxStt[2], pch=19, type="b", cex=cl)
+arrows(plot2$DD-1, plot2$lowerE,plot2$DD-1, plot2$upperE, col=colsSxStt[2], code=0)
 
 plot3 <- sapHSite |>
-  filter(year == 2024 & siteName == "Bicycle bumps" & Genus == "Betula")
-points(plot3$DD-1, plot3$sap_mm_h, col=colsSxStt[3], pch=19)
+  filter(year == 2024 & siteName == "Bicycle bumps" & Genus == "Betula"& DD > 97)|>
+  arrange(DD)
+points(plot3$DD-1, plot3$sap_mm_h, col=colsSxStt[3], pch=19, type="b", cex=cl)
+arrows(plot3$DD-1, plot3$lowerE,plot3$DD-1, plot3$upperE, col=colsSxStt[3], code=0)
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t)
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
+mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+      cex=cml)
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(y_sl,y_hh),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plotA <- dailyW |>
+  filter(year ==2024)|>
+  arrange(doy)
 
 
+  polygon(c(plotA$doy-1,rev(plotA$doy-1)), c(plotA$DailyMinimumDryBulbTemperature, rev(plotA$DailyMaximumDryBulbTemperature)), col="#7F7F7F99", border=NA)
 
+  for(i in 1:nrow(plotA)){
+    polygon((c((plotA$doy[i]-1)-0.25,(plotA$doy[i]-1)-0.25,(plotA$doy[i]-1)+0.25,(plotA$doy[i]-1)+0.25)),
+          c(precipRescale(0,prMax,y_sl,y_hh),  precipRescale(plotA$precip[i],prMax,y_sl,y_hh),
+            precipRescale(plotA$precip[i],prMax,y_sl,y_hh),precipRescale(0,prMax,y_sl,y_hh)), col="slategray2", border=NA)
+  }
+points(plotA$doy-1, precipRescale(plotA$sDepth_cm,prMax,y_sl,y_hh), col="black", type="l", cex=cl, lwd=lwW)
+
+plotB <- soil_all_ave |>
+  filter(year==2024 & location == "open" & site == "permafrost")
+points(plotB$doy-1, plotB$Ts, type="l", col=colsSite[1], cex=cl, lwd=lwW)
+
+plotC<- soil_all_ave |>
+  filter(year==2024 & location == "open" & site == "permafrost-free")
+points(plotC$doy-1, plotC$Ts, type="l", col=colsSite[2], cex=cl, lwd=lwW)
+
+
+legend(94,22, c("Air temperature range (Max-Min)", "Precipitation", "Snow depth"), 
+       pch=c(15,15,NA),lwd=c(NA,NA,lw.t), col=c("#7F7F7F99","slategray2","black"), bty="n", cex=lgc)
+
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t )
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqT, las=2, cex.axis=ca, lwd.ticks = lw.t)
+axis(4, precipRescale(yseqPr,prMax,y_sl,y_hh),yseqPr, las=2, cex.axis=ca, lwd.ticks = lw.t)
+mtext(expression(paste("Air/Soil temperature (",degree,"C)")), side=2, line=ll1,
+      cex=cml)
+
+
+## 2025
+
+
+par(mai= c(ma,ma,ma,ma))
 
 plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
      type="n", axes=FALSE, yaxs="i", xaxs="i",
      xlab = " ", ylab=" ")
 
 plot1 <- sapHSite |>
-  filter(year == 2025 & siteName == "Permafrost")
-points(plot1$DD, plot1$sap_mm_h, col=colsSxStt[1], pch=19)
-
+  filter(year == 2025 & siteName == "Permafrost"& DD > 97) |>
+  arrange(DD)
+points(plot1$DD, plot1$sap_mm_h, col=colsSxStt[1], pch=19, type="b", cex=cl)
+arrows(plot1$DD, plot1$lowerE,plot1$DD, plot1$upperE, col=colsSxStt[1], code=0)
 plot2 <- sapHSite |>
-  filter(year == 2025 & siteName == "Bicycle bumps" & Genus == "Picea")
-points(plot2$DD, plot2$sap_mm_h, col=colsSxStt[2], pch=19)
-
+  filter(year == 2025 & siteName == "Bicycle bumps" & Genus == "Picea"& DD > 97)|>
+  arrange(DD)
+points(plot2$DD, plot2$sap_mm_h, col=colsSxStt[2], pch=19, type="b", cex=cl)
+arrows(plot2$DD, plot2$lowerE,plot2$DD, plot2$upperE, col=colsSxStt[2], code=0)
 
 plot3 <- sapHSite |>
-  filter(year == 2025 & siteName == "Bicycle bumps" & Genus == "Betula")
-points(plot3$DD, plot3$sap_mm_h, col=colsSxStt[3], pch=19)
+  filter(year == 2025 & siteName == "Bicycle bumps" & Genus == "Betula"& DD > 97)|>
+  arrange(DD)
+points(plot3$DD, plot3$sap_mm_h, col=colsSxStt[3], pch=19, type="b", cex=cl)
+arrows(plot3$DD, plot3$lowerE,plot3$DD, plot3$upperE, col=colsSxStt[3], code=0)
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t)
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
 
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(y_sl,y_hh),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plotA <- dailyW |>
+  filter(year ==2025)|>
+  arrange(doy)
+
+
+polygon(c(plotA$doy,rev(plotA$doy)), c(plotA$DailyMinimumDryBulbTemperature, rev(plotA$DailyMaximumDryBulbTemperature)), col="#7F7F7F99", border=NA)
+
+for(i in 1:nrow(plotA)){
+  polygon((c((plotA$doy[i])-0.25,(plotA$doy[i])-0.25,(plotA$doy[i])+0.25,(plotA$doy[i])+0.25)),
+          c(precipRescale(0,prMax,y_sl,y_hh),  precipRescale(plotA$precip[i],prMax,y_sl,y_hh),
+            precipRescale(plotA$precip[i],prMax,y_sl,y_hh),precipRescale(0,prMax,y_sl,y_hh)), col="slategray2", border=NA)
+}
+points(plotA$doy, precipRescale(plotA$sDepth_cm,prMax,y_sl,y_hh), col="black", type="l", cex=cl, lwd=lwW)
+
+plotB <- soil_all_ave |>
+  filter(year==2025 & location == "open" & site == "permafrost")
+points(plotB$doy, plotB$Ts, type="l", col=colsSite[1], cex=cl, lwd=lwW)
+
+plotC<- soil_all_ave |>
+  filter(year==2025 & location == "open" & site == "permafrost-free")
+points(plotC$doy, plotC$Ts, type="l", col=colsSite[2], cex=cl, lwd=lwW)
+
+
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t )
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqT, las=2, cex.axis=ca, lwd.ticks = lw.t)
+axis(4, precipRescale(yseqPr,prMax,y_sl,y_hh),yseqPr, las=2, cex.axis=ca, lwd.ticks = lw.t)
+
+
+
+## 2026
+
+par(mai= c(ma,ma,ma,ma))
 
 plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
      type="n", axes=FALSE, yaxs="i", xaxs="i",
      xlab = " ", ylab=" ")
 
 plot1 <- sapHSite |>
-  filter(year == 2026 & siteName == "Permafrost")
-points(plot1$DD, plot1$sap_mm_h, col=colsSxStt[1], pch=19)
-
+  filter(year == 2026 & siteName == "Permafrost"& DD > 97) |>
+  arrange(DD)
+points(plot1$DD, plot1$sap_mm_h, col=colsSxStt[1], pch=19, type="b", cex=cl)
+arrows(plot1$DD, plot1$lowerE,plot1$DD, plot1$upperE, col=colsSxStt[1], code=0)
 plot2 <- sapHSite |>
-  filter(year == 2026 & siteName == "Bicycle bumps" & Genus == "Picea")
-points(plot2$DD, plot2$sap_mm_h, col=colsSxStt[2], pch=19)
-
+  filter(year == 2026 & siteName == "Bicycle bumps" & Genus == "Picea"& DD > 97)|>
+  arrange(DD)
+points(plot2$DD, plot2$sap_mm_h, col=colsSxStt[2], pch=19, type="b", cex=cl)
+arrows(plot2$DD, plot2$lowerE,plot2$DD, plot2$upperE, col=colsSxStt[2], code=0)
 
 plot3 <- sapHSite |>
-  filter(year == 2026 & siteName == "Bicycle bumps" & Genus == "Betula")
-points(plot3$DD, plot3$sap_mm_h, col=colsSxStt[3], pch=19)
+  filter(year == 2026 & siteName == "Bicycle bumps" & Genus == "Betula"& DD > 97)|>
+  arrange(DD)
+points(plot3$DD, plot3$sap_mm_h, col=colsSxStt[3], pch=19, type="b", cex=cl)
+arrows(plot3$DD, plot3$lowerE,plot3$DD, plot3$upperE, col=colsSxStt[3], code=0)
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t)
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
 
+par(mai= c(ma,ma,ma,ma))
 
-
-plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,100),
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(y_sl,y_hh),
      type="n", axes=FALSE, yaxs="i", xaxs="i",
      xlab = " ", ylab=" ")
 
+plotA <- dailyW |>
+  filter(year ==2026)|>
+  arrange(doy)
+
+
+polygon(c(plotA$doy,rev(plotA$doy)), c(plotA$DailyMinimumDryBulbTemperature, rev(plotA$DailyMaximumDryBulbTemperature)), col="#7F7F7F99", border=NA)
+
+for(i in 1:nrow(plotA)){
+  polygon((c((plotA$doy[i])-0.25,(plotA$doy[i])-0.25,(plotA$doy[i])+0.25,(plotA$doy[i])+0.25)),
+          c(precipRescale(0,prMax,y_sl,y_hh),  precipRescale(plotA$precip[i],prMax,y_sl,y_hh),
+            precipRescale(plotA$precip[i],prMax,y_sl,y_hh),precipRescale(0,prMax,y_sl,y_hh)), col="slategray2", border=NA)
+}
+points(plotA$doy, precipRescale(plotA$sDepth_cm,prMax,y_sl,y_hh), col="black", type="l", cex=cl, lwd=lwW)
+
+plotB <- soil_all_ave |>
+  filter(year==2026 & location == "open" & site == "permafrost")
+points(plotB$doy, plotB$Ts, type="l", col=colsSite[1], cex=cl, lwd=lwW)
+
+plotB <- soil_all_ave |>
+  filter(year==2026 & location == "canopy" & site == "permafrost")
+points(plotB$doy, plotB$Ts, type="l", col=colsSite[1], cex=cl, lwd=lwW, lty=2)
+
+plotC<- soil_all_ave |>
+  filter(year==2026 & location == "open" & site == "permafrost-free")
+points(plotC$doy, plotC$Ts, type="l", col=colsSite[2], cex=cl, lwd=lwW)
+
+plotC<- soil_all_ave |>
+  filter(year==2026 & location == "canopy" & site == "permafrost-free")
+points(plotC$doy, plotC$Ts, type="l", col=colsSite[2], cex=cl, lwd=lwW, lty=2)
+
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t )
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqT, las=2, cex.axis=ca, lwd.ticks = lw.t)
+axis(4, precipRescale(yseqPr,prMax,y_sl,y_hh),yseqPr, las=2, cex.axis=ca, lwd.ticks = lw.t)
+
+
+
+
+mtext(expression(paste("Precipitation (mm)")), side=4, line=ll2,
+      cex=cml)
+mtext(expression(paste("Snow depth (cm)")), side=4, line=ll3,
+      cex=cml)
+
+dev.off()
+
+
+
+
+
+########## graphing: fall patterns ----
+
+
+# make graphs of data by doy
+
+
+# x limits
+dl <- 244
+du <- 304
+
+
+# cex axis
+ca <- 3
+# line for first label
+ll1 <- 5
+
+ll2 <- 7
+
+ll3 <- 11
+# line for doy
+llxa <- 2
+# cex for label text
+cma <- 2
+cml <- 3
+# legend size
+lgc <- 2
+# mai size
+ma <- 0.7
+# axis tick
+lw.t <- 3
+# point size
+cl <- 1.25
+# line thickness
+lwW <- 2
+# 
+y_sl <- -20
+y_hh <- 20
+
+prMax<- 80
+
+xseq <- c(235,244,258,274,288,308)
+lseq <- c("", "Sept-1","Sept-15","Oct-1","Oct-15","")
+yseqJ <- seq(0,160,by=20)
+yseqT <- seq(-20,20, by=10)
+yseqPr <- seq(0,80,by=10)
+
+precipRescale <- function(x,precipMax,ylf,yhf) {
+  (((yhf-ylf)/precipMax)*x)+ylf
+}
+precipRescale(10,prMax,y_sl,y_hh)
+
+dayseq <- seq(dl,du, by=0.5)
+dayseql <- seq(dl,du, by=1)
+
+wd <- 8
+hd <- 5
+png(paste0(dirSave, "/sapflow_fall_hour.png"), width=26, height=12, units="in", res=100)
+layout(matrix(c(1,2,3,4,5,6),ncol=3, byrow=FALSE), width=lcm(rep(wd,3)*2.54),height=lcm(c(hd,hd)*2.54))
+
+
+## 2024
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
 
 plot1 <- sapHSite |>
-  filter(year == 2024 & siteName == "Permafrost") |>
+  filter(year == 2024 & siteName == "Permafrost"& DD > 97) |>
   arrange(DD)
-points(plot1$DD-1, plot1$sap_mm_h, col=colsSxStt[1], pch=19, type="b")
-
+points(plot1$DD-1, plot1$sap_mm_h, col=colsSxStt[1], pch=19, type="b", cex=cl)
+arrows(plot1$DD-1, plot1$lowerE,plot1$DD-1, plot1$upperE, col=colsSxStt[1], code=0)
 plot2 <- sapHSite |>
-  filter(year == 2025 & siteName == "Permafrost") |>
+  filter(year == 2024 & siteName == "Bicycle bumps" & Genus == "Picea"& DD > 97)|>
   arrange(DD)
-points(plot2$DD, plot2$sap_mm_h, col="dodgerblue4", pch=19, type="b")
-
+points(plot2$DD-1, plot2$sap_mm_h, col=colsSxStt[2], pch=19, type="b", cex=cl)
+arrows(plot2$DD-1, plot2$lowerE,plot2$DD-1, plot2$upperE, col=colsSxStt[2], code=0)
 
 plot3 <- sapHSite |>
-  filter(year == 2026 & siteName == "Permafrost") |>
+  filter(year == 2024 & siteName == "Bicycle bumps" & Genus == "Betula"& DD > 97)|>
   arrange(DD)
-points(plot3$DD, plot3$sap_mm_h, col="gray50", pch=19, type="b")
+points(plot3$DD-1, plot3$sap_mm_h, col=colsSxStt[3], pch=19, type="b", cex=cl)
+arrows(plot3$DD-1, plot3$lowerE,plot3$DD-1, plot3$upperE, col=colsSxStt[3], code=0)
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t)
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
+mtext(expression(paste("Sap flow (mm h"^-1,")")), side=2, line=ll1,
+      cex=cml)
+par(mai= c(ma,ma,ma,ma))
 
-
-weather_day$doy <- yday(weather_day$date)
-weather_day$year <- year(weather_day$date)
-plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(-40,20),
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(y_sl,y_hh),
      type="n", axes=FALSE, yaxs="i", xaxs="i",
      xlab = " ", ylab=" ")
 
-plot1 <- weather_day |>
-  filter(year==2024)
+plotA <- dailyW |>
+  filter(year ==2024)|>
+  arrange(doy)
 
-points(plot1$doy-1,plot1$DailyMaximumDryBulbTemperature, type="l", col=colsSxStt[1])
 
-points(plot1$doy-1,plot1$DailyMinimumDryBulbTemperature, type="l", col=colsSxStt[1])
+polygon(c(plotA$doy-1,rev(plotA$doy-1)), c(plotA$DailyMinimumDryBulbTemperature, rev(plotA$DailyMaximumDryBulbTemperature)), col="#7F7F7F99", border=NA)
 
-plot2 <- weather_day |>
-  filter(year==2025)
+for(i in 1:nrow(plotA)){
+  polygon((c((plotA$doy[i]-1)-0.25,(plotA$doy[i]-1)-0.25,(plotA$doy[i]-1)+0.25,(plotA$doy[i]-1)+0.25)),
+          c(precipRescale(0,prMax,y_sl,y_hh),  precipRescale(plotA$precip[i],prMax,y_sl,y_hh),
+            precipRescale(plotA$precip[i],prMax,y_sl,y_hh),precipRescale(0,prMax,y_sl,y_hh)), col="slategray2", border=NA)
+}
+points(plotA$doy-1, precipRescale(plotA$sDepth_cm,prMax,y_sl,y_hh), col="black", type="l", cex=cl, lwd=lwW)
 
-points(plot2$doy-1,plot2$DailyMaximumDryBulbTemperature, type="l", col="dodgerblue4")
+plotB <- soil_all_ave |>
+  filter(year==2024 & location == "open" & site == "permafrost")
+points(plotB$doy-1, plotB$Ts, type="l", col=colsSite[1], cex=cl, lwd=lwW)
 
-points(plot2$doy-1,plot2$DailyMinimumDryBulbTemperature, type="l", col="dodgerblue4")
+plotC<- soil_all_ave |>
+  filter(year==2024 & location == "open" & site == "permafrost-free")
+points(plotC$doy-1, plotC$Ts, type="l", col=colsSite[2], cex=cl, lwd=lwW)
 
-plot3 <- weather_day |>
-  filter(year==2026)
 
-points(plot3$doy-1,plot3$DailyMaximumDryBulbTemperature, type="l", col="gray30")
+legend(94,22, c("Air temperature range (Max-Min)", "Precipitation", "Snow depth"), 
+       pch=c(15,15,NA),lwd=c(NA,NA,lw.t), col=c("#7F7F7F99","slategray2","black"), bty="n", cex=lgc)
 
-points(plot3$doy-1,plot3$DailyMinimumDryBulbTemperature, type="l", col="gray30")
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t )
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqT, las=2, cex.axis=ca, lwd.ticks = lw.t)
+axis(4, precipRescale(yseqPr,prMax,y_sl,y_hh),yseqPr, las=2, cex.axis=ca, lwd.ticks = lw.t)
+mtext(expression(paste("Air/Soil temperature (",degree,"C)")), side=2, line=ll1,
+      cex=cml)
 
+
+## 2025
+
+
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plot1 <- sapHSite |>
+  filter(year == 2025 & siteName == "Permafrost"& DD > 97) |>
+  arrange(DD)
+points(plot1$DD, plot1$sap_mm_h, col=colsSxStt[1], pch=19, type="b", cex=cl)
+arrows(plot1$DD, plot1$lowerE,plot1$DD, plot1$upperE, col=colsSxStt[1], code=0)
+plot2 <- sapHSite |>
+  filter(year == 2025 & siteName == "Bicycle bumps" & Genus == "Picea"& DD <258)|>
+  arrange(DD)
+points(plot2$DD, plot2$sap_mm_h, col=colsSxStt[2], pch=19, type="b", cex=cl)
+arrows(plot2$DD, plot2$lowerE,plot2$DD, plot2$upperE, col=colsSxStt[2], code=0)
+
+plot3 <- sapHSite |>
+  filter(year == 2025 & siteName == "Bicycle bumps" & Genus == "Betula"& DD <258)|>
+  arrange(DD)
+points(plot3$DD, plot3$sap_mm_h, col=colsSxStt[3], pch=19, type="b", cex=cl)
+arrows(plot3$DD, plot3$lowerE,plot3$DD, plot3$upperE, col=colsSxStt[3], code=0)
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t)
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
+
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(y_sl,y_hh),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plotA <- dailyW |>
+  filter(year ==2025)|>
+  arrange(doy)
+
+
+polygon(c(plotA$doy,rev(plotA$doy)), c(plotA$DailyMinimumDryBulbTemperature, rev(plotA$DailyMaximumDryBulbTemperature)), col="#7F7F7F99", border=NA)
+
+for(i in 1:nrow(plotA)){
+  polygon((c((plotA$doy[i])-0.25,(plotA$doy[i])-0.25,(plotA$doy[i])+0.25,(plotA$doy[i])+0.25)),
+          c(precipRescale(0,prMax,y_sl,y_hh),  precipRescale(plotA$precip[i],prMax,y_sl,y_hh),
+            precipRescale(plotA$precip[i],prMax,y_sl,y_hh),precipRescale(0,prMax,y_sl,y_hh)), col="slategray2", border=NA)
+}
+points(plotA$doy, precipRescale(plotA$sDepth_cm,prMax,y_sl,y_hh), col="black", type="l", cex=cl, lwd=lwW)
+
+plotB <- soil_all_ave |>
+  filter(year==2025 & location == "open" & site == "permafrost")
+points(plotB$doy, plotB$Ts, type="l", col=colsSite[1], cex=cl, lwd=lwW)
+
+plotC<- soil_all_ave |>
+  filter(year==2025 & location == "open" & site == "permafrost-free")
+points(plotC$doy, plotC$Ts, type="l", col=colsSite[2], cex=cl, lwd=lwW)
+
+
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t )
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqT, las=2, cex.axis=ca, lwd.ticks = lw.t)
+axis(4, precipRescale(yseqPr,prMax,y_sl,y_hh),yseqPr, las=2, cex.axis=ca, lwd.ticks = lw.t)
+
+
+
+## 2026
+
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plot1 <- sapHSite |>
+  filter(year == 2026 & siteName == "Permafrost"& DD > 97) |>
+  arrange(DD)
+points(plot1$DD, plot1$sap_mm_h, col=colsSxStt[1], pch=19, type="b", cex=cl)
+arrows(plot1$DD, plot1$lowerE,plot1$DD, plot1$upperE, col=colsSxStt[1], code=0)
+plot2 <- sapHSite |>
+  filter(year == 2026 & siteName == "Bicycle bumps" & Genus == "Picea"& DD > 97)|>
+  arrange(DD)
+points(plot2$DD, plot2$sap_mm_h, col=colsSxStt[2], pch=19, type="b", cex=cl)
+arrows(plot2$DD, plot2$lowerE,plot2$DD, plot2$upperE, col=colsSxStt[2], code=0)
+
+plot3 <- sapHSite |>
+  filter(year == 2026 & siteName == "Bicycle bumps" & Genus == "Betula"& DD > 97)|>
+  arrange(DD)
+points(plot3$DD, plot3$sap_mm_h, col=colsSxStt[3], pch=19, type="b", cex=cl)
+arrows(plot3$DD, plot3$lowerE,plot3$DD, plot3$upperE, col=colsSxStt[3], code=0)
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t)
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
+
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(y_sl,y_hh),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+
+plotA <- dailyW |>
+  filter(year ==2026)|>
+  arrange(doy)
+
+
+polygon(c(plotA$doy,rev(plotA$doy)), c(plotA$DailyMinimumDryBulbTemperature, rev(plotA$DailyMaximumDryBulbTemperature)), col="#7F7F7F99", border=NA)
+
+for(i in 1:nrow(plotA)){
+  polygon((c((plotA$doy[i])-0.25,(plotA$doy[i])-0.25,(plotA$doy[i])+0.25,(plotA$doy[i])+0.25)),
+          c(precipRescale(0,prMax,y_sl,y_hh),  precipRescale(plotA$precip[i],prMax,y_sl,y_hh),
+            precipRescale(plotA$precip[i],prMax,y_sl,y_hh),precipRescale(0,prMax,y_sl,y_hh)), col="slategray2", border=NA)
+}
+points(plotA$doy, precipRescale(plotA$sDepth_cm,prMax,y_sl,y_hh), col="black", type="l", cex=cl, lwd=lwW)
+
+plotB <- soil_all_ave |>
+  filter(year==2026 & location == "open" & site == "permafrost")
+points(plotB$doy, plotB$Ts, type="l", col=colsSite[1], cex=cl, lwd=lwW)
+
+plotB <- soil_all_ave |>
+  filter(year==2026 & location == "canopy" & site == "permafrost")
+points(plotB$doy, plotB$Ts, type="l", col=colsSite[1], cex=cl, lwd=lwW, lty=2)
+
+plotC<- soil_all_ave |>
+  filter(year==2026 & location == "open" & site == "permafrost-free")
+points(plotC$doy, plotC$Ts, type="l", col=colsSite[2], cex=cl, lwd=lwW)
+
+plotC<- soil_all_ave |>
+  filter(year==2026 & location == "canopy" & site == "permafrost-free")
+points(plotC$doy, plotC$Ts, type="l", col=colsSite[2], cex=cl, lwd=lwW, lty=2)
+
+axis(1, xseq,rep("",length(xseq)), cex.axis=ca, lwd.ticks = lw.t )
+mtext(at=xseq,lseq, side=1, line=llxa,cex=cma)
+axis(2, yseqT, las=2, cex.axis=ca, lwd.ticks = lw.t)
+axis(4, precipRescale(yseqPr,prMax,y_sl,y_hh),yseqPr, las=2, cex.axis=ca, lwd.ticks = lw.t)
+
+
+
+
+mtext(expression(paste("Precipitation (mm)")), side=4, line=ll2,
+      cex=cml)
+mtext(expression(paste("Snow depth (cm)")), side=4, line=ll3,
+      cex=cml)
+
+dev.off()
