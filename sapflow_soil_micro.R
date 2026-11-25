@@ -64,6 +64,23 @@ for(i in 1: length(fileSN)){
 }
 
 tomstAll <- do.call("rbind",datT)
+###### Stand allometry
+stand_dbh <- read.csv(paste0(dirData[pathI],"/Stand_dbh.csv"))
+
+unique(stand_dbh$Species)
+
+#LA in m2 Power et al 2014 for PI sp. Yarie et al gives foliage weight in g
+# 
+#Melvin et al birch specific leaf area 0.0158 m2 per g 
+
+
+stand_dbh$height_m <-ifelse(stand_dbh$Species == "Picea mariana", 0.441+0.703*stand_dbh$DBH,
+                          ifelse( stand_dbh$Species == "Picea glauca",1.47+0.848*stand_dbh$DBH-0.005*(stand_dbh$DBH^2),
+                                  ifelse( stand_dbh$Species == "Betula neoalaskana",      5.619+0.899*stand_dbh$DBH-0.014*(stand_dbh$DBH^2),NA)))
+stand_dbh$LA_m2 <-ifelse(stand_dbh$Species == "Picea mariana", 1.541*(stand_dbh$DBH^3.782)*(stand_dbh$height_m^-2.73),
+                       ifelse( stand_dbh$Species == "Picea glauca",0.1595*(stand_dbh$DBH^3.131)*(stand_dbh$height_m^-1.625),
+                        ifelse(stand_dbh$Species=="Betula neoalaskana",( 145.892*stand_dbh$DBH)*0.158,NA)))                            
+                             
 ##### BENE sapwood allometry ----
 bene <- read.csv(paste0(dirData[pathI], "/BENE allometry.csv"))
 
@@ -1572,7 +1589,163 @@ mtext(expression(paste("log(maximum daily sap flow (mm h"^-1,"))")),side=2, line
       cex=cml)
 dev.off()
 
-ggplot(fall_maxJs |>
-         filter(site == "permafrost" & Genus == "Picea"), aes(DailyMaximumDryBulbTemperature, log_max, color=as.factor(year)))+
-  geom_point()
 
+################ El and leaf area ----
+
+
+
+bp.El <- El_micro |>
+  filter(site == "permafrost-free" & Genus == "Picea")
+El.mod.bp <- lm(bp.El$ml_m2_day ~ bp.El$Ts + bp.El$VPD)
+bp.res <- rstandard(El.mod.bp)
+bp.fit <- fitted(El.mod.bp)
+qqnorm(bp.res)
+qqline(bp.res)
+plot(bp.fit,bp.res)
+abline(h=0)
+summary(El.mod.bp)
+
+bb.El <- El_micro |>
+  filter(site == "permafrost-free" & Genus == "Betula")
+El.mod.bb <- lm(bb.El$ml_m2_day ~ bb.El$Ts + bb.El$VPD)
+bb.res <- rstandard(El.mod.bb)
+bb.fit <- fitted(El.mod.bb)
+qqnorm(bb.res)
+qqline(bb.res)
+plot(bb.fit,bb.res)
+summary(El.mod.bb)
+
+pp.El <- El_micro |>
+  filter(site == "permafrost")
+El.mod.pp <- lm(pp.El$ml_m2_day ~ pp.El$Ts + pp.El$VPD)
+pp.res <- rstandard(El.mod.pp)
+pp.fit <- fitted(El.mod.pp)
+qqnorm(pp.res)
+qqline(pp.res)
+plot(pp.fit,pp.res)
+summary(El.mod.pp)
+
+
+
+
+El_pp <- El_site |> filter(site=="permafrost" & Genus == "Picea")
+qEl_pp <- quantile(El_pp$ml_m2_day, probs=c(0,0.25,0.5,0.75,1))
+
+El_bp <- El_site |> filter(site=="permafrost-free" & Genus == "Picea")
+qEl_bp <- quantile(El_bp$ml_m2_day, probs=c(0,0.25,0.5,0.75,1))
+
+El_bb <- El_site |> filter(site=="permafrost-free" & Genus == "Betula")
+qEl_bb <- quantile(El_bb$ml_m2_day, probs=c(0,0.25,0.5,0.75,1))
+
+LA_pp <- stand_dbh |> filter(Plot == "Permafrost" & Species == "Picea mariana")
+qLA_pp <- quantile(LA_pp$LA_m2, probs=c(0,0.25,0.5,0.75,1))
+
+LA_bp <- stand_dbh |> filter(Plot == "bicycle bumps" & Species == "Picea glauca")
+qLA_bp <- quantile(LA_bp$LA_m2, probs=c(0,0.25,0.5,0.75,1))
+
+LA_bb <- stand_dbh |> filter(Plot == "bicycle bumps" & Species == "Betula neoalaskana")
+qLA_bb <- quantile(LA_bb$LA_m2, probs=c(0,0.25,0.5,0.75,1))
+
+
+
+
+# cex axis
+ca <- 2.5
+# line for first label
+ll1 <- 5
+
+ll2 <- 6
+
+ll3 <- 11
+# line for doy
+llxa <- 5
+# cex for label text
+cma <- 2
+cml <- 3
+# legend size
+lgc <- 2
+# mai size
+ma <- 1.2
+# axis tick
+lw.t <- 3
+# point size
+cl <- 2
+# line thickness
+lwW <- 3
+# 
+y_l <- 0
+y_h <- 300
+
+y_l2 <- 0
+y_h2 <- 1100
+
+# x limits
+xl1 <- 0.5
+xu1 <- 3.5
+
+
+xseq <- c(-1,1,2,3,5)
+xseql <- c("","P. mariana", "P. glauca", "B. neoalaskana","")
+yseqJ <- seq(0,300,by=50)
+yseqJ2 <- seq(0,1000,by=100)
+wd <- 12
+hd <- 10
+png(paste0(dirSave, "/dailyT_LA.png"), width=26, height=12, units="in", res=100)
+layout(matrix(c(1,2),ncol=2, byrow=FALSE), width=lcm(rep(wd,2)*2.54),height=lcm(c(hd)*2.54))
+
+
+
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(xl1,xu1), ylim=c(y_l,y_h),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+  arrows(1,qEl_pp[1], 1, qEl_pp[5], lwd=lwW, col=colsSxStt[1], code=0)
+  arrows(2,qEl_bp[1], 2, qEl_bp[5], lwd=lwW, col=colsSxStt[2], code=0)
+  arrows(3,qEl_bb[1], 3, qEl_bb[5], lwd=lwW, col=colsSxStt[3], code=0)
+  polygon(c(1-0.2,1-0.2,1+0.2,1+0.2),
+          c(qEl_pp[2],qEl_pp[4],qEl_pp[4],qEl_pp[2]),col=colsSxStt[1],border=NA)  
+  
+  polygon(c(2-0.2,2-0.2,2+0.2,2+0.2),
+          c(qEl_bp[2],qEl_bp[4],qEl_bp[4],qEl_bp[2]),col=colsSxStt[2],border=NA)  
+  
+  polygon(c(3-0.2,3-0.2,3+0.2,3+0.2),
+          c(qEl_bb[2],qEl_bb[4],qEl_bb[4],qEl_bb[2]),col=colsSxStt[3],border=NA)  
+  
+  arrows(1.2,qEl_pp[3], 0.8, qEl_pp[3], lwd=lwW, col=colsSxS[1], code=0)
+  arrows(2.2,qEl_bp[3], 1.8, qEl_bp[3], lwd=lwW, col=colsSxS[2], code=0)
+  arrows(3.2,qEl_bb[3], 2.8, qEl_bb[3], lwd=lwW, col=colsSxS[3], code=0)
+
+  axis(1, xseq, xseql, cex.axis=ca, lwd.ticks = lw.t, padj=0.5)
+  axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
+  mtext(expression(paste("Sap-flow scaled daily transpiration (mL m"^-2,"day"^-1,")")),side=2, line=ll1,
+        cex=cml)
+  
+  
+  par(mai= c(ma,ma,ma,ma))
+  
+  plot(c(0,1), c(0,1), xlim=c(xl1,xu1), ylim=c(y_l2,y_h2),
+       type="n", axes=FALSE, yaxs="i", xaxs="i",
+       xlab = " ", ylab=" ")
+  arrows(1,qLA_pp[1], 1, qLA_pp[5], lwd=lwW, col=colsSxStt[1], code=0)
+  arrows(2,qLA_bp[1], 2, qLA_bp[5], lwd=lwW, col=colsSxStt[2], code=0)
+  arrows(3,qLA_bb[1], 3, qLA_bb[5], lwd=lwW, col=colsSxStt[3], code=0)
+  polygon(c(1-0.2,1-0.2,1+0.2,1+0.2),
+          c(qLA_pp[2],qLA_pp[4],qLA_pp[4],qLA_pp[2]),col=colsSxStt[1],border=NA)  
+  
+  polygon(c(2-0.2,2-0.2,2+0.2,2+0.2),
+          c(qLA_bp[2],qLA_bp[4],qLA_bp[4],qLA_bp[2]),col=colsSxStt[2],border=NA)  
+  
+  polygon(c(3-0.2,3-0.2,3+0.2,3+0.2),
+          c(qLA_bb[2],qLA_bb[4],qLA_bb[4],qLA_bb[2]),col=colsSxStt[3],border=NA)  
+  
+  arrows(1.2,qLA_pp[3], 0.8, qLA_pp[3], lwd=lwW, col=colsSxS[1], code=0)
+  arrows(2.2,qLA_bp[3], 1.8, qLA_bp[3], lwd=lwW, col=colsSxS[2], code=0)
+  arrows(3.2,qLA_bb[3], 2.8, qLA_bb[3], lwd=lwW, col=colsSxS[3], code=0)
+  
+  axis(1, xseq, xseql, cex.axis=ca, lwd.ticks = lw.t, padj=0.5)
+  axis(2, yseqJ2, las=2, cex.axis=ca, lwd.ticks = lw.t)
+  mtext(expression(paste("Projected canopy leaf area (m"^2,")")),side=2, line=ll1,
+        cex=cml)
+  
+ dev.off() 
