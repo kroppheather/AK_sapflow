@@ -560,20 +560,20 @@ sapHSite$month <- month(sapHSite$date)
 sapDSensor <- sapNorth|>
   na.omit() |>
   group_by( doy, year, siteID, siteName,month, Genus,sensorID) %>%
-  summarise(sap_mm_d = sum(mm_h),
+  summarise(sap_mm_d = max(mm_h),
             n=n())|>
   filter(n >= 20)
 
 sapDSite <- sapDSensor |>
   group_by( doy, year, month, siteID, siteName, Genus) |>
-  summarise(sap_mm_day = mean(sap_mm_d),
-            sd_mm_day = sd(sap_mm_d), 
+  summarise(sap_mm_max = mean(sap_mm_d),
+            sd_mm_max = sd(sap_mm_d), 
             n_mm_day = n()) |>
   filter(n_mm_day >= 3)
 sapDSite$Name <- paste(sapDSite$siteName, sapDSite$Genus)
-sapDSite$se <- sapDSite$sd_mm_day /sqrt(sapDSite$n_mm_day)
-sapDSite$lowerE <- sapDSite$sap_mm_day - sapDSite$se
-sapDSite$upperE <- sapDSite$sap_mm_day + sapDSite$se
+sapDSite$se <- sapDSite$sd_mm_max /sqrt(sapDSite$n_mm_day)
+sapDSite$lowerE <- sapDSite$sap_mm_max - sapDSite$se
+sapDSite$upperE <- sapDSite$sap_mm_max+ sapDSite$se
 
 ##### El ----
 
@@ -673,7 +673,7 @@ summary(El.mod.bp)
 
 bb.El <- El_micro |>
   filter(site == "permafrost-free" & Genus == "Betula")
-El.mod.bb <- lm(bb.El$El_site ~ bb.El$swc + bb.El$VPD)
+El.mod.bb <- lm(bb.El$El_site ~ bb.El$Ts + bb.El$VPD)
 bb.res <- rstandard(El.mod.bb)
 bb.fit <- fitted(El.mod.bb)
 qqnorm(bb.res)
@@ -711,6 +711,11 @@ dailyW$year <- year(dailyW$date)
 
 soil_all_ave$year <- year(soil_all_ave$date_day)
 soil_all_ave$doy <- yday(soil_all_ave$date_day)
+daysap$site <- ifelse(daysap$siteName=="Bicycle bumps", "permafrost-free",
+                      ifelse(daysap$siteName=="Permafrost", "permafrost",NA))
+
+
+
 ###### Graphing parms ----
 colsSxS <- c("#C187C7", # permafrost picea
              "#007C57", # bb picea
@@ -1200,7 +1205,7 @@ plot(c(0,1), c(0,1), xlim=c(dl,du), ylim=c(0,160),
      xlab = " ", ylab=" ")
 
 plot1 <- sapHSite |>
-  filter(year == 2026 & siteName == "Permafrost"& DD > 97) |>
+  filter(year == 2026 & siteName == "Permafrost"& DD <258) |>
   arrange(DD)
 points(plot1$DD, plot1$sap_mm_h, col=colsSxStt[1], pch=19, type="b", cex=cl)
 arrows(plot1$DD, plot1$lowerE,plot1$DD, plot1$upperE, col=colsSxStt[1], code=0)
@@ -1269,3 +1274,305 @@ mtext(expression(paste("Snow depth (cm)")), side=4, line=ll3,
       cex=cml)
 
 dev.off()
+
+
+################ Spring patterns in max sap flow ----
+maxJs <- left_join(daysap, soil_sites_day, by=c("site", "month","year", "date"="date_day"))
+
+maxJs$AirAmp <- maxJs$DailyMaximumDryBulbTemperature-maxJs$DailyMinimumDryBulbTemperature
+maxJs$FreezeAmp <- (maxJs$DailyMaximumDryBulbTemperature-maxJs$DailyMinimumDryBulbTemperature)*ifelse(maxJs$DailyMinimumDryBulbTemperature<0,-1,1)
+maxJs$log_max <- log(maxJs$sap_mm_max)
+maxJs$log_lower <- log(maxJs$lowerE)
+maxJs$log_upper <- log(maxJs$upperE)
+maxJs$log_amp <- log(maxJs$AirAmp)
+
+spring_maxJs <- maxJs |> filter(doy < 135)
+ppJs <- spring_maxJs |> filter(Genus=="Picea" &site == "permafrost")
+mod.pp <- lm(ppJs$log_max ~ ppJs$log_amp)
+pp.res <- rstandard(mod.pp)
+pp.fit <- fitted(mod.pp)
+qqnorm(pp.res)
+qqline(pp.res)
+plot(pp.fit,pp.res)
+summary(mod.pp)
+
+bpJs <- spring_maxJs |> filter(Genus=="Picea" &site == "permafrost-free")
+mod.bp <- lm(bpJs$log_max ~ bpJs$log_amp)
+bp.res <- rstandard(mod.bp)
+bp.fit <- fitted(mod.bp)
+qqnorm(bp.res)
+qqline(bp.res)
+plot(bp.fit,bp.res)
+summary(mod.bp)
+
+
+bbJs <- spring_maxJs |> filter(Genus=="Betula" &site == "permafrost-free")
+mod.bb <- lm(bbJs$log_max ~ bbJs$log_amp)
+bb.res <- rstandard(mod.bb)
+bb.fit <- fitted(mod.bb)
+qqnorm(bb.res)
+qqline(bb.res)
+plot(bb.fit,bb.res)
+summary(mod.bb)
+
+
+
+mppJs <- spring_maxJs |> filter(Genus=="Picea" &site == "permafrost")
+mod.ppm <- lm(mppJs$log_max ~ mppJs$DailyMaximumDryBulbTemperature)
+ppm.res <- rstandard(mod.ppm)
+ppm.fit <- fitted(mod.ppm)
+qqnorm(ppm.res)
+qqline(ppm.res)
+plot(ppm.fit,ppm.res)
+summary(mod.ppm)
+
+bpmJs <- spring_maxJs |> filter(Genus=="Picea" &site == "permafrost-free")
+mod.bpm <- lm(bpmJs$log_max ~ bpmJs$DailyMaximumDryBulbTemperature)
+bpm.res <- rstandard(mod.bpm)
+bpm.fit <- fitted(mod.bpm)
+qqnorm(bpm.res)
+qqline(bpm.res)
+plot(bpm.fit,bpm.res)
+summary(mod.bpm)
+
+
+bbmJs <- spring_maxJs |> filter(Genus=="Betula" &site == "permafrost-free")
+mod.bbm <- lm(bbmJs$log_max ~ bbmJs$DailyMaximumDryBulbTemperature)
+bbm.res <- rstandard(mod.bbm)
+bbm.fit <- fitted(mod.bbm)
+qqnorm(bbm.res)
+qqline(bbm.res)
+plot(bbm.fit,bbm.res)
+summary(mod.bbm)
+
+
+
+
+# cex axis
+ca <- 3
+# line for first label
+ll1 <- 5
+
+ll2 <- 6
+
+ll3 <- 11
+# line for doy
+llxa <- 5
+# cex for label text
+cma <- 2
+cml <- 3
+# legend size
+lgc <- 2
+# mai size
+ma <- 1.2
+# axis tick
+lw.t <- 3
+# point size
+cl <- 2
+# line thickness
+lwW <- 3
+# 
+y_l <- 1.2
+y_h <- 5
+
+# x limits
+xl1 <- 0.7
+xu1 <- 3.5
+xl2 <- -10
+xu2 <- 21
+
+xseq <- seq(0.8,3.4,by=0.2)
+xseq2 <- seq(-10,20,by=5)
+yseqJ <- seq(1,5,by=0.5)
+
+wd <- 10
+hd <- 10
+png(paste0(dirSave, "/max_sapflow_spring.png"), width=27, height=12, units="in", res=100)
+layout(matrix(c(1,2),ncol=2, byrow=FALSE), width=lcm(rep(wd,2)*2.54),height=lcm(c(hd)*2.54))
+
+
+
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(xl1,xu1), ylim=c(y_l,y_h),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+points1 <- spring_maxJs |>
+  filter(site == "permafrost" & Genus == "Picea")
+points(points1$log_amp, points1$log_max, col=colsSxStt[1], pch=19, cex=cl)
+arrows(points1$log_amp, points1$log_lower,points1$log_amp, points1$log_upper, col=colsSxStt[1], code=0)
+abline(mod.pp, col=colsSxStt[1], lwd=lwW )
+
+points2 <- spring_maxJs |>
+  filter(site == "permafrost-free" & Genus == "Picea")
+points(points2$log_amp, points2$log_max, col=colsSxStt[2], pch=19, cex=cl)
+arrows(points2$log_amp, points2$log_lower,points2$log_amp, points2$log_upper, col=colsSxStt[2], code=0)
+abline(mod.bp, col=colsSxStt[2], lwd=lwW )
+
+points3 <- spring_maxJs |>
+  filter(site == "permafrost-free" & Genus == "Betula")
+points(points3$log_amp, points3$log_max, col=colsSxStt[3], pch=19, cex=cl)
+arrows(points3$log_amp, points3$log_lower,points3$log_amp, points3$log_upper, col=colsSxStt[3], code=0)
+abline(mod.bb, col=colsSxStt[3], lwd=lwW )
+
+axis(1, xseq, cex.axis=ca, lwd.ticks = lw.t, mgp=c(3,2,0))
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
+mtext(expression(paste("log(maximum daily sap flow (mm h"^-1,"))")),side=2, line=ll1,
+      cex=cml)
+
+mtext(expression(paste("log(maximum-minimum air temperature (",degree,"C))")), side=1, line=ll2,
+      cex=cml)
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(xl2,xu2), ylim=c(y_l,y_h),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+points1 <- spring_maxJs |>
+  filter(site == "permafrost" & Genus == "Picea")
+points(points1$DailyMaximumDryBulbTemperature, points1$log_max, col=colsSxStt[1], pch=19, cex=cl)
+arrows(points1$DailyMaximumDryBulbTemperature, points1$log_lower,points1$DailyMaximumDryBulbTemperature, points1$log_upper, col=colsSxStt[1], code=0)
+abline(mod.ppm, col=colsSxStt[1], lwd=lwW )
+
+points2 <- spring_maxJs |>
+  filter(site == "permafrost-free" & Genus == "Picea")
+points(points2$DailyMaximumDryBulbTemperature, points2$log_max, col=colsSxStt[2], pch=19, cex=cl)
+arrows(points2$DailyMaximumDryBulbTemperature, points2$log_lower,points2$DailyMaximumDryBulbTemperature, points2$log_upper, col=colsSxStt[2], code=0)
+abline(mod.bpm, col=colsSxStt[2], lwd=lwW )
+
+points3 <- spring_maxJs |>
+  filter(site == "permafrost-free" & Genus == "Betula")
+points(points3$DailyMaximumDryBulbTemperature, points3$log_max, col=colsSxStt[3], pch=19, cex=cl)
+arrows(points3$DailyMaximumDryBulbTemperature, points3$log_lower,points3$DailyMaximumDryBulbTemperature, points3$log_upper, col=colsSxStt[3], code=0)
+abline(mod.bbm, col=colsSxStt[3], lwd=lwW )
+
+axis(1, xseq2, cex.axis=ca, lwd.ticks = lw.t, mgp=c(3,2,0))
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
+mtext(expression(paste("Maximum air temperature (",degree,"C)")), side=1, line=ll2,
+      cex=cml)
+mtext(expression(paste("log(maximum daily sap flow (mm h"^-1,"))")),side=2, line=ll1,
+      cex=cml)
+dev.off()
+
+
+
+
+################ Fall patterns in max sap flow ----
+
+
+maxJs <- left_join(daysap, soil_sites_day, by=c("site", "month","year", "date"="date_day"))
+
+maxJs$AirAmp <- maxJs$DailyMaximumDryBulbTemperature-maxJs$DailyMinimumDryBulbTemperature
+maxJs$FreezeAmp <- (maxJs$DailyMaximumDryBulbTemperature-maxJs$DailyMinimumDryBulbTemperature)*ifelse(maxJs$DailyMinimumDryBulbTemperature<0,-1,1)
+maxJs$log_max <- log(maxJs$sap_mm_max)
+maxJs$log_lower <- log(maxJs$lowerE)
+maxJs$log_upper <- log(maxJs$upperE)
+maxJs$log_amp <- log(maxJs$AirAmp)
+
+fall_maxJs <- maxJs |> filter(doy > 244)
+ppJs <- fall_maxJs |> filter(Genus=="Picea" &site == "permafrost")
+mod.pp <- lm(ppJs$log_max ~ ppJs$log_amp)
+pp.res <- rstandard(mod.pp)
+pp.fit <- fitted(mod.pp)
+qqnorm(pp.res)
+qqline(pp.res)
+plot(pp.fit,pp.res)
+summary(mod.pp)
+
+mppJs <- fall_maxJs |> filter(Genus=="Picea" &site == "permafrost")
+mod.ppm <- lm(mppJs$log_max ~ mppJs$DailyMaximumDryBulbTemperature)
+ppm.res <- rstandard(mod.ppm)
+ppm.fit <- fitted(mod.ppm)
+qqnorm(ppm.res)
+qqline(ppm.res)
+plot(ppm.fit,ppm.res)
+summary(mod.ppm)
+
+
+
+# cex axis
+ca <- 3
+# line for first label
+ll1 <- 5
+
+ll2 <- 6
+
+ll3 <- 11
+# line for doy
+llxa <- 5
+# cex for label text
+cma <- 2
+cml <- 3
+# legend size
+lgc <- 2
+# mai size
+ma <- 1.2
+# axis tick
+lw.t <- 3
+# point size
+cl <- 2
+# line thickness
+lwW <- 3
+# 
+y_l <- 0
+y_h <- 5
+
+# x limits
+xl1 <- 0.7
+xu1 <- 3.5
+xl2 <- -10
+xu2 <- 21
+
+xseq <- seq(0.8,3.4,by=0.2)
+xseq2 <- seq(-10,20,by=5)
+yseqJ <- seq(0,5,by=0.5)
+
+wd <- 10
+hd <- 10
+png(paste0(dirSave, "/max_sapflow_fall.png"), width=27, height=12, units="in", res=100)
+layout(matrix(c(1,2),ncol=2, byrow=FALSE), width=lcm(rep(wd,2)*2.54),height=lcm(c(hd)*2.54))
+
+
+
+par(mai= c(ma,ma,ma,ma))
+
+plot(c(0,1), c(0,1), xlim=c(xl1,xu1), ylim=c(y_l,y_h),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+points1 <- fall_maxJs |>
+  filter(site == "permafrost" & Genus == "Picea")
+points(points1$log_amp, points1$log_max, col=colsSxStt[1], pch=19, cex=cl)
+arrows(points1$log_amp, points1$log_lower,points1$log_amp, points1$log_upper, col=colsSxStt[1], code=0)
+abline(mod.pp, col=colsSxStt[1], lwd=lwW )
+
+
+
+axis(1, xseq, cex.axis=ca, lwd.ticks = lw.t, mgp=c(3,2,0))
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
+mtext(expression(paste("log(maximum daily sap flow (mm h"^-1,"))")),side=2, line=ll1,
+      cex=cml)
+
+mtext(expression(paste("log(maximum-minimum air temperature (",degree,"C))")), side=1, line=ll2,
+      cex=cml)
+par(mai= c(ma,ma,ma,ma))
+plot(c(0,1), c(0,1), xlim=c(xl2,xu2), ylim=c(y_l,y_h),
+     type="n", axes=FALSE, yaxs="i", xaxs="i",
+     xlab = " ", ylab=" ")
+points1 <- fall_maxJs |>
+  filter(site == "permafrost" & Genus == "Picea")
+points(points1$DailyMaximumDryBulbTemperature, points1$log_max, col=colsSxStt[1], pch=19, cex=cl)
+arrows(points1$DailyMaximumDryBulbTemperature, points1$log_lower,points1$DailyMaximumDryBulbTemperature, points1$log_upper, col=colsSxStt[1], code=0)
+abline(mod.ppm, col=colsSxStt[1], lwd=lwW )
+
+
+
+axis(1, xseq2, cex.axis=ca, lwd.ticks = lw.t, mgp=c(3,2,0))
+axis(2, yseqJ, las=2, cex.axis=ca, lwd.ticks = lw.t)
+mtext(expression(paste("Maximum air temperature (",degree,"C)")), side=1, line=ll2,
+      cex=cml)
+mtext(expression(paste("log(maximum daily sap flow (mm h"^-1,"))")),side=2, line=ll1,
+      cex=cml)
+dev.off()
+
+ggplot(fall_maxJs |>
+         filter(site == "permafrost" & Genus == "Picea"), aes(DailyMaximumDryBulbTemperature, log_max, color=as.factor(year)))+
+  geom_point()
+
